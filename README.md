@@ -1,6 +1,6 @@
 # GCNT2 Expression Profiles in Human and Mouse Gut Resident T Cells 🧬
 
-## Description ✅ <a name="description"></a> {#description}
+## Description ✅ <a name="description"></a> 
 
 This project relies on scRNA-seq and bulk RNA-seq datasets from mouse and human guts to quantify _GCNT2_ expression across various cell types and distinct gastrointestinal conditions. 
 The cellular focus of the analysis is CD8αα⁺ T cells (T⍺⍺) and CD8αβ⁺ tissue-resident memory T cells (Trm) although other gut resident cells are also investigated as a source of comparison.
