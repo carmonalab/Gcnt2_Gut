@@ -1,0 +1,6 @@
+# Mac specific
+.DS_Store
+*.DS_Store
+
+# README Previews
+README.html
