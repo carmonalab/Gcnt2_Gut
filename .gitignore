@@ -5,3 +5,13 @@
 # README Previews
 README.html
 
+# R project files
+.Rproj.user
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Knitted files from Rmarkdown 
+01_data_preprocessing.html
+01_data_preprocessing.pdf
