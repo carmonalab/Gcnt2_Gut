@@ -15,3 +15,6 @@ README.html
 # Knitted files from Rmarkdown 
 01_data_preprocessing.html
 01_data_preprocessing.pdf
+
+# Raw datasets whixh are space consuming 
+datasets/
