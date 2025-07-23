@@ -290,20 +290,24 @@ print(head(meta))
 To make cell ids compatible with other datasets, append the study ID at the beginning of the original cell name. If available, also add other metadata elements such as Individual, tissue or treatment.
 
 ```{r modify_cellID}
-#fields in prefix are separated by dots
-prefix <- paste(ID, meta$Individual, meta$Tissue, meta$Treatment,sep=".")
-
-# underscore delimits end of prefix
-cell_ids <- paste(prefix, meta$Barcode, sep = '_') 
-colnames(data_matrix)<- cell_ids
-data_matrix[1:10,1:2]
+# Fields in prefix are separated by dots
+ID <- "GSE214695"
+for(key in names(data_matrices)){
+  prefix <- paste(ID, metas[[key]]$Individual, metas[[key]]$Tissue, metas[[key]]$Treatment, sep=".")
+  
+  # Adding new cell ids to raw data 
+  cell_ids <- paste(prefix, metas[[key]]$Barcode, sep = '_') # Underscore delimits end of prefix
+  colnames(data_matrices[[key]]) <- cell_ids
+  
+  # Adding new cell ids to metadata 
+  rownames(metas[[key]]) <- cell_ids  
+}
 ```
 
-Add new cells ids to metadata
-
-```{r add_ID}
-rownames(meta) <- cell_ids
-head(meta)
+```{r visual_new_cell_ids}
+data_matrices[[1]][1:10, 1:2]
+cat("\n")
+print(head(metas[[1]]))
 ```
 
 ## Create Seurat object (custom)
