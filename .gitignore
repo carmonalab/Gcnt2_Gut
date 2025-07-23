@@ -20,5 +20,5 @@ renv/
 01_data_preprocessing.pdf
 
 # Space-consuming datasets  
-datasets/
-SalasA_2023_GSE214695/
+# datasets/
+# SalasA_2023_GSE214695/
