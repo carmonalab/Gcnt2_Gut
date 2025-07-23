@@ -19,8 +19,9 @@ for _GCNT2_ and hopefully elucidate how T⍺⍺ cells are activated.
 ## R Environment 🌲 <a name="renv"></a>
 
 This project comes with its own R environment. In order to activate and be able to run all the comprised code, 
-open the project through the **Gcnt2_Gut.Rproj** file and execute the following command: 
+open the project through the **Gcnt2_Gut.Rproj** file and execute the following commands: 
 
 ```R
+renv::activate()
 renv::restore()
 ```
