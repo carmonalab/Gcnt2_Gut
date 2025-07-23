@@ -90,7 +90,7 @@ set.seed(my_seed)
 
 # max number of cells per sample (if higher, they will downsampled)
 # make sure to set seed for this step
-ds <- 2600
+ds <- 1000
 
 # Optional: min number of cells per sample, samples with lower number will be discarded
 min.cells <- 200 
@@ -172,20 +172,16 @@ Depending on the data format at GEO or Zenodo, use different tools to load the d
 Matrices
 
 ```{r load_mtx}
-library(Seurat)
-
 fpath <- file.path(input_data_path_root, geo_acc)
 data_matrices <- list()
-files <- list.files(path = fpath, full.names = TRUE)
+files <- list.files(path = fpath, pattern = "matrix", full.names = TRUE)
 
 for(file in files){
-  if(grepl("matrix\\.mtx\\.gz$", file)){
-    prefix <- substr(basename(file), 1, 16)
-    data_matrix <- ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
-                   cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
-                   features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
-                   cell.column = 1, feature.column = 1)
-  }
+  prefix <- substr(basename(file), 1, 16)
+  data_matrix <- Seurat::ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
+                 cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
+                 features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
+                 cell.column = 1, feature.column = 1)
   
   data_matrices[[prefix]] <- data_matrix
 }
