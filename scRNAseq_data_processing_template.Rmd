@@ -183,7 +183,7 @@ for(file in files){
                  features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
                  cell.column = 1, feature.column = 1)
   
-  data_matrices[[prefix]] <- data_matrix
+  data_matrices[[substr(prefix, 1, 15)]] <- data_matrix
 }
 ```
 
@@ -215,9 +215,20 @@ Asses whether raw counts are available or only pre-normalized (eg log2TMP), if p
 ## 2. Make sure data matrix has genes as rows and cells as columns
 
 ```{r check_mtx}
-dim(data_matrix)
+cat(dim(data_matrix), "\n")
+cat("Number of columns:", ncol(data_matrix), "\n")
+cat("Number of rows:", nrow(data_matrix), "\n")
+cat("\n")
 data_matrix[1:10,1:10]
-head(colnames(data_matrix))
+cat("\n")
+cat(head(colnames(data_matrix)), "\n")
+cat(head(rownames(data_matrix)), "\n")
+cat("\n")
+cat(sample(colnames(data_matrix), 3), "\n")
+cat(sample(rownames(data_matrix), 3), "\n")
+cat("\n")
+cat(length(readLines(sprintf("%s/GSM6614365_CD-6_barcodes.tsv.gz", fpath))), "\n")
+cat(length(readLines(sprintf("%s/GSM6614365_CD-6_features.tsv.gz", fpath))), "\n")
 ```
 
 ## 3. Include, adapt and standarize cell metadata
@@ -248,20 +259,30 @@ Generate a metadata dataframe including the following variables for each cell in
 
 ```{r adapt_meta}
 # Explore data and modifiy this code accordinly to fill the metadata slots
-cell_names <- colnames(data_matrix)
-cell_names.split <- strsplit(cell_names,"\\.")
-meta <- list()
-meta[["Original_cell_names"]] <- cell_names
-meta[["Barcode"]] <- sapply(cell_names.split,function(x) x[[1]])
-cell_names.split.2 <- sapply(cell_names.split,function(x) x[[2]])
-meta[["Sample"]] <- cell_names.split.2
-cell_names.split.2.split <- strsplit(cell_names.split.2,"\\_")
-meta[["Treatment"]] <- sapply(cell_names.split.2.split,function(x) x[[1]])
-meta[["Individual"]] <- sapply(cell_names.split.2.split,function(x) x[[2]])
-meta[["Tissue"]] <- sapply(cell_names.split.2.split,function(x) x[[3]])
+metas <- list()
 
-sapply(meta,head)
-meta <- as.data.frame(meta)
+for(key in names(data_matrices)){
+  
+  cell_names <- colnames(data_matrices[[key]])
+  cell_names.split <- strsplit(cell_names, "\\-")
+  meta <- list()
+  meta[["Original_cell_names"]] <- cell_names
+  meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
+  meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
+  
+  individual <- key
+  individual.split <- strsplit(individual, "\\_")
+  meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
+  meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
+  meta[["Tissue"]] <- "Gut"
+  
+  meta <- as.data.frame(meta)
+  metas[[key]] <- meta
+}
+```
+
+```{r visual_metadata}
+print(head(meta))
 ```
 
 ## 4. Modify cell identifiers (`orig.ident`)
