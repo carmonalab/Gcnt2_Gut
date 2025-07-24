@@ -384,7 +384,7 @@ if (species == "mouse") {
 } else if (species == "human") {
    geneRef_file <- "aux/EnsemblGenes105_Hsa_GRCh38.p13.txt.gz"
 }
-geneRef <- fread(geneRef_file)
+geneRef <- data.table::fread(geneRef_file)
 ```
 
 ```{r Standar_gene_Symbol}
@@ -393,13 +393,13 @@ data_seurat <- STACAS::StandardizeGeneSymbols(data_seurat, geneRef, assay = "RNA
 
 # adapt metafeatures
 # there incompatibilites with newer version of STACAS and Seurat v5
-seu[["RNA"]]@meta.features <- data.frame(row.names = rownames(seu))
+data_seurat[["RNA"]]@meta.features <- data.frame(row.names = rownames(data_seurat))
 ```
 
 CHECK slots TODO If data pre-normalized, apply inverse of NormalizeData() into "counts" slot. Then we can run NormalizeData() routinely
 
 ```{r}
-head(data_seurat@meta.data)
+data_seurat@meta.data[sample(nrow(data_seurat@meta.data), 25), ]
 ```
 
 ### Clean cell metadata (custom)
@@ -411,7 +411,7 @@ data_seurat$orig.ident <- cell_ids
 data_seurat$Sample <- factor(data_seurat$Sample)
 data_seurat$Individual <- factor(data_seurat$Individual)
 data_seurat$Tissue <- factor(data_seurat$Tissue)
-data_seurat$Tissue <- recode(data_seurat$Tissue, b = "blood", t = "tumor")
+data_seurat$Tissue <- recode(data_seurat$Tissue, b = "blood", t = "tumor", g = "Gut")
 #data_seurat$OriginalAnnotationLevel1 <- 
 #data_seurat$OriginalAnnotationLevel2 <- 
 #data_seurat$OriginalAnnotationLevel3 <- 
@@ -424,7 +424,7 @@ head(data_seurat)
 # Remove duplicates from Gene symbols reference
 features_meta_data <- geneRef[!duplicated(geneRef$`Gene name`),]
 # Convert to dataframe
-setDF(features_meta_data)
+data.table::setDF(features_meta_data)
 
 rownames(features_meta_data) <- features_meta_data$`Gene name`
 # in Seurat, underscores ('_'), are replaced with dashes ('-')
@@ -434,7 +434,7 @@ features_meta_data <- features_meta_data[rownames(data_seurat),]
 
 if ( all.equal(rownames(features_meta_data),
                as.character(rownames(data_seurat))) ) {
-  data_seurat[["RNA"]] <- AddMetaData(data_seurat[["RNA"]],
+  data_seurat[["RNA"]] <- Seurat::AddMetaData(data_seurat[["RNA"]],
                                       metadata = features_meta_data)
   rm(geneRef,features_meta_data)
 }
@@ -463,26 +463,26 @@ Standardize per-sample/patient attributes when available:
 -   `...`
 
 ```{r load_batch_metadata}
-# Path to patient metadata
-fpath <- "~/Dropbox/CSI/Standardized_SingleCell_Datasets/ZhangY_2022_34653365/data/"
-individual_metadata <- read.csv(sprintf("%s/samples_metadata.csv",fpath))
-rownames(individual_metadata) <- individual_metadata$Patient.ID
-
-# check that patient metadata contain only the patients included in the sc object
-individual_metadata <- individual_metadata[individual_metadata$Patient.ID %in%
-                                          unique(data_seurat@meta.data$Individual),]
-individual_metadata <- individual_metadata[order(individual_metadata$Patient.ID),]
-
-# Expand Seurat data structure to add `batch.metadata` in `@misc`.
-data_seurat@misc$batch.metadata <- list()
-data_seurat@misc$batch.metadata$Individual <- individual_metadata
-head(data_seurat@misc$batch.metadata)
+# # Path to patient metadata
+# fpath <- "~/Dropbox/CSI/Standardized_SingleCell_Datasets/ZhangY_2022_34653365/data/"
+# individual_metadata <- read.csv(sprintf("%s/samples_metadata.csv",fpath))
+# rownames(individual_metadata) <- individual_metadata$Patient.ID
+# 
+# # check that patient metadata contain only the patients included in the sc object
+# individual_metadata <- individual_metadata[individual_metadata$Patient.ID %in%
+#                                           unique(data_seurat@meta.data$Individual),]
+# individual_metadata <- individual_metadata[order(individual_metadata$Patient.ID),]
+# 
+# # Expand Seurat data structure to add `batch.metadata` in `@misc`.
+# data_seurat@misc$batch.metadata <- list()
+# data_seurat@misc$batch.metadata$Individual <- individual_metadata
+# head(data_seurat@misc$batch.metadata)
 ```
 
 CHECK are data pre-normalized? decide whether to Normalize
 
 ```{r norm_Data}
-data_seurat <- NormalizeData(data_seurat) 
+data_seurat <- Seurat::NormalizeData(data_seurat) 
 ```
 
 # Quality control measurement and filtering
@@ -492,13 +492,15 @@ data_seurat <- NormalizeData(data_seurat)
 Use `SignatuR` package, including ribosomal and mitochondrial gene sets, to compute their relative content. Also, compute the sequencing complexity by computing the log10 ratio of genes detected per UMI.
 
 ```{r define_qc_metrics}
+data("SignatuR", package = "SignatuR")
+
 #Get mitochondrial and ribosomal signatures
-ribo.genes <- GetSignature(SignatuR$Hs$Compartments$Ribo)$Ribo
-mito.genes <- GetSignature(SignatuR$Hs$Compartments$Mito)$Mito
+ribo.genes <- SignatuR::GetSignature(SignatuR$Hs$Compartments$Ribo)$Ribo
+mito.genes <- SignatuR::GetSignature(SignatuR$Hs$Compartments$Mito)$Mito
 
 # Compute ribosomal and mitochondrial content and add to Seurat object metadata
-data_seurat <- AddMetaData(data_seurat, metadata = PercentageFeatureSet(data_seurat, features = ribo.genes[ribo.genes %in% rownames(data_seurat)]), col.name = "percent.ribo")
-data_seurat <- AddMetaData(data_seurat, metadata = PercentageFeatureSet(data_seurat, features = mito.genes[mito.genes %in% rownames(data_seurat)]), col.name = "percent.mito")
+data_seurat <- Seurat::AddMetaData(data_seurat, metadata = Seurat::PercentageFeatureSet(data_seurat, features = ribo.genes[ribo.genes %in% rownames(data_seurat)]), col.name = "percent.ribo")
+data_seurat <- Seurat::AddMetaData(data_seurat, metadata = Seurat::PercentageFeatureSet(data_seurat, features = mito.genes[mito.genes %in% rownames(data_seurat)]), col.name = "percent.mito")
 
 # Compute the ratio of number of genes/features and number of counts/UMIs
 data_seurat$log10GenesPerUmi <- log10(data_seurat$nFeature_RNA) / 
@@ -520,17 +522,26 @@ For MALAT1 as a QC criterion, see: <https://www.biorxiv.org/content/10.1101/2024
 ```{r}
 sample.size.pre <- sort(table(data_seurat$Sample))
 sample.size.pre
-barplot(sort(sample.size.pre), las=2)
+# barplot(sort(sample.size.pre), las=2)
 ```
 
 ### CHECK: distributions across samples
 
 ```{r qc_plots0, fig.height= 10}
-Idents(data_seurat) <- "Sample"
-VlnPlot(data_seurat,
+Seurat::Idents(data_seurat) <- "Sample"
+# Seurat::VlnPlot(data_seurat,
+#         features = c("nFeature_RNA", "nCount_RNA",
+#                      "percent.ribo","percent.mito",
+#                      "PTPRC","MALAT1"),
+#         ncol = 3, pt.size=0)
+# print(sum(is.na(data_seurat$percent.ribo)))
+# print(sum(is.na(data_seurat$percent.mito)))
+
+data_seurat <- subset(data_seurat, subset = !is.na(percent.ribo) & !is.na(percent.mito))
+
+Seurat::VlnPlot(data_seurat,
         features = c("nFeature_RNA", "nCount_RNA",
-                     "percent.ribo","percent.mito",
-                     "PTPRC","MALAT1"),
+                     "percent.ribo","percent.mito"),
         ncol = 3, pt.size=0)
 ```
 
