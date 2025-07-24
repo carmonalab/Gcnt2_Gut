@@ -313,13 +313,21 @@ print(head(metas[[1]]))
 ## Create Seurat object (custom)
 
 ```{r Create_Seurat}
-data_seurat <- CreateSeuratObject(counts=data_matrix,
-                                  project=ds_name,
-                                  meta.data = meta,
-                                  assay="RNA",
-                                  min.cells = 0,
-                                  min.features = 0)
-rm(data_matrix,meta,cell_ids)
+data_seurat_list <- list()
+
+for(key in names(data_matrices)){
+  cat("Creating seurat object for", key)
+  data_seurat <- Seurat::CreateSeuratObject(counts=data_matrices[[key]],
+                                    project=ds_name,
+                                    meta.data = metas[[key]],
+                                    assay="RNA",
+                                    min.cells = 0,
+                                    min.features = 0)
+  data_seurat_list[[key]] <- data_seurat
+  
+}
+
+rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas, data_seurat)
 # free up rstudio memory
 gc() 
 ```
