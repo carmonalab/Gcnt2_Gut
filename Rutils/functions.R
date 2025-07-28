@@ -1,4 +1,5 @@
-
+library(dplyr)
+library(ggplot2)
 # takes a single-cell (genes x cells) matrix with named rows (given gene names) and the path to Ensembl annotation (output of biomart with fields "Gene name", "Gene Synonym" and "Gene stable ID"
 # Returns a matrix with filtered rows of genes with standard gene names. Of accepted synonyms were found, these are converted to standard gene names, as long as these are not redundant
 

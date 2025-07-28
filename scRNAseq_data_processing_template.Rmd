@@ -85,7 +85,7 @@ ID <- "SaaA"
 species <- "human"
 
 #set seed
-my_seed <- 321
+my_seed <- 42
 set.seed(my_seed)
 
 # max number of cells per sample (if higher, they will downsampled)
@@ -279,7 +279,7 @@ Generate a metadata dataframe including the following variables for each cell in
 #   individual.split <- strsplit(individual, "\\_")
 #   meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
 #   meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
-#   meta[["Tissue"]] <- "Gut"
+#   meta[["Tissue"]] <- "gut"
 #   
 #   meta <- as.data.frame(meta)
 #   metas[[key]] <- meta
@@ -296,7 +296,7 @@ individual <- "GSM6614348_HC-1"
 individual.split <- strsplit(individual, "\\_")
 meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
 meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
-meta[["Tissue"]] <- "Gut"
+meta[["Tissue"]] <- "gut"
 
 meta <- as.data.frame(meta)
 
@@ -365,13 +365,17 @@ data_seurat <- Seurat::CreateSeuratObject(counts=data_matrix,
                                     project=ds_name,
                                     meta.data = meta,
                                     assay="RNA",
-                                    min.cells = 0,
-                                    min.features = 0)
+                                    min.cells = 3,
+                                    min.features = 10)
 
-rm(data_matrix, meta, cell_ids, prefix)
+rm(data_matrix, meta, prefix, cell_ids)
 # free up rstudio memory
 gc() 
 ```
+```{r seurat_ncell}
+print(length(Seurat::Cells(data_seurat)))
+```
+
 
 ## 5. Standardize gene symbols
 
@@ -401,17 +405,20 @@ CHECK slots TODO If data pre-normalized, apply inverse of NormalizeData() into "
 ```{r}
 data_seurat@meta.data[sample(nrow(data_seurat@meta.data), 25), ]
 ```
+```{r}
+print(head(Seurat::Cells(data_seurat)))
+```
 
 ### Clean cell metadata (custom)
 
 CHECK: cell metadata fields: Sample, Individual, Tissue c("blood","tumor","adjacent","LN","other"), Study, OriginalAnnotationLevel1, OriginalAnnotationLevel2, OriginalAnnotationLevel3... Factorize or change labels if needed.
 
 ```{r clean_metadata}
-data_seurat$orig.ident <- cell_ids
+data_seurat$orig.ident <- Seurat::Cells(data_seurat) #cell_ids
 data_seurat$Sample <- factor(data_seurat$Sample)
 data_seurat$Individual <- factor(data_seurat$Individual)
 data_seurat$Tissue <- factor(data_seurat$Tissue)
-data_seurat$Tissue <- recode(data_seurat$Tissue, b = "blood", t = "tumor", g = "Gut")
+data_seurat$Tissue <- dplyr::recode(data_seurat$Tissue, b = "blood", t = "tumor", g = "gut")
 #data_seurat$OriginalAnnotationLevel1 <- 
 #data_seurat$OriginalAnnotationLevel2 <- 
 #data_seurat$OriginalAnnotationLevel3 <- 
@@ -438,6 +445,8 @@ if ( all.equal(rownames(features_meta_data),
                                       metadata = features_meta_data)
   rm(geneRef,features_meta_data)
 }
+
+print(head(data_seurat[["RNA"]]@meta.features))
 ```
 
 ## 7. Load and store patient metadata
@@ -503,8 +512,7 @@ data_seurat <- Seurat::AddMetaData(data_seurat, metadata = Seurat::PercentageFea
 data_seurat <- Seurat::AddMetaData(data_seurat, metadata = Seurat::PercentageFeatureSet(data_seurat, features = mito.genes[mito.genes %in% rownames(data_seurat)]), col.name = "percent.mito")
 
 # Compute the ratio of number of genes/features and number of counts/UMIs
-data_seurat$log10GenesPerUmi <- log10(data_seurat$nFeature_RNA) / 
-                                log10(data_seurat$nCount_RNA)
+data_seurat$log10GenesPerUmi <- log10(data_seurat$nFeature_RNA) / log10(data_seurat$nCount_RNA)
 ```
 
 ## 2. Evaluate QC metrics and filter dataset
@@ -515,6 +523,17 @@ Here are shown some guidelines for QC-based filtering:
 
 \|--------------------------------------\|---------------------------------------------------------------------\| \| QC metric \| Guidelines for filtering \| \|--------------------------------------\|---------------------------------------------------------------------\| \| Ribosomal content \| \> 0.5% & \< 60% \| \| Mitochondrial content \| \< 10-20% \| \| Number of genes/features (nFeatures) \| \>400 and custom upper limit based on your data \| \| Number of counts/UMI (nCount) \| \>800 and custom and custom upper limit based on your data \| \| Ratio Features/Counts \| \> 0.6 \| \| Special genes \| Custom: Consider remove some of these genes for downstream analysis \| \| Special genes \| E.g. MALAT1 \| \|--------------------------------------\|---------------------------------------------------------------------\|
 
+| QC metric                           | Guidelines for filtering                                  |
+|-------------------------------------|-----------------------------------------------------------|
+| Ribosomal content                   | > 0.5% & < 60%                                            |
+| Mitochondrial content               | < 10–20%                                                  |
+| Number of genes/features (nFeature) | > 400 and custom upper limit based on your data           |
+| Number of counts/UMI (nCount)       | > 800 and custom upper limit based on your data           |
+| Ratio Features/Counts               | > 0.6                                                     |
+| Special genes                       | Custom: Consider removing some of these genes in analysis |
+| Special genes                       | E.g., MALAT1                                              |
+
+
 For MALAT1 as a QC criterion, see: <https://www.biorxiv.org/content/10.1101/2024.04.18.590104v1>
 
 ### How many cells per sample?
@@ -522,27 +541,22 @@ For MALAT1 as a QC criterion, see: <https://www.biorxiv.org/content/10.1101/2024
 ```{r}
 sample.size.pre <- sort(table(data_seurat$Sample))
 sample.size.pre
-# barplot(sort(sample.size.pre), las=2)
+barplot(sort(sample.size.pre), las=2)
 ```
 
 ### CHECK: distributions across samples
 
 ```{r qc_plots0, fig.height= 10}
 Seurat::Idents(data_seurat) <- "Sample"
-# Seurat::VlnPlot(data_seurat,
-#         features = c("nFeature_RNA", "nCount_RNA",
-#                      "percent.ribo","percent.mito",
-#                      "PTPRC","MALAT1"),
-#         ncol = 3, pt.size=0)
+Seurat::VlnPlot(data_seurat,
+        features = c("nFeature_RNA", "nCount_RNA",
+                     "percent.ribo","percent.mito",
+                     "PTPRC","MALAT1"),
+        ncol = 3, pt.size=0)
 # print(sum(is.na(data_seurat$percent.ribo)))
 # print(sum(is.na(data_seurat$percent.mito)))
 
-data_seurat <- subset(data_seurat, subset = !is.na(percent.ribo) & !is.na(percent.mito))
-
-Seurat::VlnPlot(data_seurat,
-        features = c("nFeature_RNA", "nCount_RNA",
-                     "percent.ribo","percent.mito"),
-        ncol = 3, pt.size=0)
+# data_seurat <- subset(data_seurat, subset = !is.na(percent.ribo) & !is.na(percent.mito))
 ```
 
 ### Custom thresholds
@@ -554,7 +568,7 @@ cutoffs <- list()
 cutoffs[["percent.ribo"]] <- c(min=0.5,max=60)
 cutoffs[["percent.mito"]] <- c(min=0,max=20)
 cutoffs[["nFeature_RNA"]] <- c(min=400,max=6000) 
-cutoffs[["nCount_RNA"]] <- c(min=800,max=40000) # raw counts present??
+cutoffs[["nCount_RNA"]] <- c(min=800,max=40000) 
 cutoffs[["log10GenesPerUmi"]] <- 0.6
 cutoffs[["MALAT1"]] <- 2
 print(cutoffs)
@@ -563,12 +577,17 @@ print(cutoffs)
 ### Filter out outliers & low quality cells (custom)
 
 ```{r qc_plots}
-Idents(data_seurat) <- "Sample"
-VlnPlot(data_seurat,
+source("Rutils/functions.R")
+
+Seurat::Idents(data_seurat) <- "Sample"
+Seurat::VlnPlot(data_seurat,
         features = c("nFeature_RNA", "nCount_RNA",
                      "percent.ribo","percent.mito",
                      "MALAT1"),
-        ncol = 2, pt.size=0)
+        ncol = 3, pt.size=0)
+
+# Adding MALAT1 expression data to Seurat object metadata
+data_seurat@meta.data$MALAT1 <- Seurat::FetchData(data_seurat, vars = "MALAT1")[,1]
 
 # When using qc_plot cutoffs should be a list with the same names for 
 # QC metrics as in the metadata
@@ -577,7 +596,7 @@ qclist <- lapply(names(cutoffs), function(c){  # names of QC metrics to evaluate
 })
 
 # Join all plots into a single one
-wrap_plots(qclist)
+patchwork::wrap_plots(qclist)
 
 ```
 
@@ -633,7 +652,7 @@ At this point we should only have in our datasets high quality cells. We will re
 We will save the datasets with all high-quality cells (whole) and datasets without small samples and downsampling large ones (light).
 
 ```{r remove_small_samples}
-# Viasualize cell number cutoffs
+# Visualize cell number cutoffs
 cells.perSample <- table(data_seurat$Sample)
 barplot(sort(cells.perSample))
 abline(h=min.cells)
@@ -643,7 +662,7 @@ abline(h=ds)
 # Remove small samples
 tab <- table(data_seurat$Sample)
 keep <- names(tab)[tab > min.cells]
-data_seurat.ds <- subset(data_seurat, patient_id %in% keep)
+data_seurat.ds <- subset(data_seurat, Sample %in% keep)
 
 # Print number of samples removed
 cat(length(tab[tab <= min.cells]), "samples removed out of a total of ", length(tab) )
@@ -656,7 +675,7 @@ message(sprintf("Number of cells after QC: %i (%.2f %% of input)",
 
 ```{r downsample}
 # Downsample
-Idents(data_seurat.ds) <- "Sample"
+Seurat::Idents(data_seurat.ds) <- "Sample"
 # Set seed for downsampling
 set.seed(my_seed)
 data_seurat.ds <- subset(data_seurat.ds, downsample = ds)
@@ -688,15 +707,15 @@ barplot(sample.size.filterRatio[names(sort(sample.size.post))], las=2)
 # Export standardized datasets
 
 ```{r}
-saveRDS(data_seurat,file.path(output_data_path,paste0(ds_name,"whole.rds")))
-saveRDS(data_seurat,file.path(output_data_path,paste0(ds_name,"light.rds")))
+saveRDS(data_seurat,file.path(output_data_path,paste0(ds_name,"_whole.rds")))
+saveRDS(data_seurat.ds,file.path(output_data_path,paste0(ds_name,"_light.rds")))
 ```
 
 # Export patient/sample metadata
 
 ```{r}
-write.csv(individual_metadata,
-          file.path(output_data_path,paste0(ds_name,"individual_metadata.csv")))
+# write.csv(individual_metadata,
+#           file.path(output_data_path,paste0(ds_name,"individual_metadata.csv")))
 ```
 
 # Consider saving as H5 (<https://github.com/mojaveazure/seurat-disk>) for interoperability with Bioconductor and Python; eg SaveH5Seurat()
@@ -706,9 +725,9 @@ write.csv(individual_metadata,
 SaveH5Seurat save the whole seurat object, including metadata. For tools such as CellBender we require only the matrix count to be saved in a .h5 file, not a .h5Seurat.
 
 ```{r}
-write_dgCMatrix_h5(GetAssayData(object = merged.seurat, slot = "counts"),
+write_dgCMatrix_h5(Seurat::GetAssayData(object = data_seurat, slot = "counts"),
                     cols_are = "sample_names",
-                    h5_target = paste0(filename, ".h5"),
+                    h5_target = file.path(output_data_path, paste0(paste(geo_acc, "seurat", sep = "_"), ".h5")),
                     ref_name = ds_name)
 ```
 
