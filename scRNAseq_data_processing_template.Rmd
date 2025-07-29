@@ -195,19 +195,21 @@ for(file in files){
 
 ```{r preprocessing}
 cat("Initial number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
-num_cells_i <- data.fram(patient = names(data_matrices), 
-                         cell_count = lapply(data_matrices, ncol))
+num_cells_i <- data.frame(patient = names(data_matrices), 
+                         cell_count = sapply(data_matrices, ncol))
 num_cells_i
 
+
+
 for(key in names(data_matrices)){
-  sums <- colSums(data_matrices[[key]])
+  sums <- Matrix::colSums(data_matrices[[key]])
   ind <- which(sums < 10)
   data_matrices[[key]] <- data_matrices[[key]][, -ind]
 }
 
 cat("Final number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
-num_cells_f <- data.fram(patient = names(data_matrices), 
-                         cell_count = lapply(data_matrices, ncol))
+num_cells_f <- data.frame(patient = names(data_matrices), 
+                         cell_count = sapply(data_matrices, ncol))
 num_cells_f
 ```
 RDS files
@@ -337,6 +339,7 @@ for(key in names(data_matrices)){
 
   # Adding new cell ids to raw data
   cell_ids <- paste(prefix, metas[[key]]$Barcode, sep = '_') # Underscore delimits end of prefix
+  
   colnames(data_matrices[[key]]) <- cell_ids
 
   # Adding new cell ids to metadata
@@ -354,9 +357,11 @@ for(key in names(data_matrices)){
 ```
 
 ```{r visual_new_cell_ids}
-data_matrix[1:10, 1:2]
+data_matrices[[1]][1:10, 1:2]
+print(head(colnames(data_matrices[[1]])))
 cat("\n")
 print(head(metas[[1]]))
+print(head(rownames(metas[[1]])))
 ```
 
 ## Create Seurat object (custom)
@@ -364,8 +369,12 @@ print(head(metas[[1]]))
 data_matrix <- do.call(cbind, data_matrices)
 meta <- do.call(rbind, metas)
 
+rownames(meta) <- substr(rownames(meta), 17, length(rownames(meta)))
+
 all(rownames(meta) == colnames(data_matrix)) 
 colnames(meta)
+head(colnames(data_matrix))
+head(rownames(meta))
 ```
 
 ```{r Create_Seurat}
