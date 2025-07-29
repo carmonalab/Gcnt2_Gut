@@ -173,25 +173,43 @@ Matrices
 
 ```{r load_mtx}
 fpath <- file.path(input_data_path_root, geo_acc)
-# data_matrices <- list()
-# files <- list.files(path = fpath, pattern = "matrix", full.names = TRUE)
-# 
-# for(file in files){
-#   prefix <- substr(basename(file), 1, 16)
-#   data_matrix <- Seurat::ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
-#                  cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
-#                  features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
-#                  cell.column = 1, feature.column = 1)
-#   
-#   data_matrices[[substr(prefix, 1, 15)]] <- data_matrix
-# }
-prefix <- "GSM6614348_HC-1_"
-data_matrix <- Seurat::ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
-                  cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
-                  features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
-                  cell.column = 1, feature.column = 1)
+data_matrices <- list()
+files <- list.files(path = fpath, pattern = "matrix", full.names = TRUE)
+
+for(file in files){
+  prefix <- substr(basename(file), 1, 16)
+  data_matrix <- Seurat::ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
+                 cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
+                 features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
+                 cell.column = 1, feature.column = 1)
+
+  data_matrices[[substr(prefix, 1, 15)]] <- data_matrix
+}
+
+# prefix <- "GSM6614348_HC-1_"
+# data_matrix <- Seurat::ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
+#                   cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
+#                   features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
+#                   cell.column = 1, feature.column = 1)
 ```
 
+```{r preprocessing}
+cat("Initial number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
+num_cells_i <- data.fram(patient = names(data_matrices), 
+                         cell_count = lapply(data_matrices, ncol))
+num_cells_i
+
+for(key in names(data_matrices)){
+  sums <- colSums(data_matrices[[key]])
+  ind <- which(sums < 10)
+  data_matrices[[key]] <- data_matrices[[key]][, -ind]
+}
+
+cat("Final number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
+num_cells_f <- data.fram(patient = names(data_matrices), 
+                         cell_count = lapply(data_matrices, ncol))
+num_cells_f
+```
 RDS files
 
 ```{r load_rds, eval=F}
@@ -232,8 +250,8 @@ cat("\n")
 cat(sample(colnames(data_matrix), 3), "\n")
 cat(sample(rownames(data_matrix), 3), "\n")
 cat("\n")
-cat(length(readLines(sprintf("%s/GSM6614348_HC-1_barcodes.tsv.gz", fpath))), "\n")
-cat(length(readLines(sprintf("%s/GSM6614348_HC-1_features.tsv.gz", fpath))), "\n")
+# cat(length(readLines(sprintf("%s/GSM6614348_HC-1_barcodes.tsv.gz", fpath))), "\n")
+# cat(length(readLines(sprintf("%s/GSM6614348_HC-1_features.tsv.gz", fpath))), "\n")
 ```
 
 ## 3. Include, adapt and standarize cell metadata
@@ -264,41 +282,42 @@ Generate a metadata dataframe including the following variables for each cell in
 
 ```{r adapt_meta}
 # Explore data and modifiy this code accordinly to fill the metadata slots
-# metas <- list()
+metas <- list()
+
+for(key in names(data_matrices)){
+
+  cell_names <- colnames(data_matrices[[key]])
+  cell_names.split <- strsplit(cell_names, "\\-")
+  meta <- list()
+  meta[["Original_cell_names"]] <- cell_names
+  meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
+  # meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
+
+  individual <- key
+  individual.split <- strsplit(individual, "\\_")
+  meta[["Sample"]] <- sapply(individual.split, function(x) x[[2]])
+  meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
+  meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
+  meta[["Tissue"]] <- "gut"
+
+  meta <- as.data.frame(meta)
+  metas[[key]] <- meta
+}
+
+# cell_names <- colnames(data_matrix)
+# cell_names.split <- strsplit(cell_names, "\\-")
+# meta <- list()
+# meta[["Original_cell_names"]] <- cell_names
+# meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
+# meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
 # 
-# for(key in names(data_matrices)){
-#   
-#   cell_names <- colnames(data_matrices[[key]])
-#   cell_names.split <- strsplit(cell_names, "\\-")
-#   meta <- list()
-#   meta[["Original_cell_names"]] <- cell_names
-#   meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
-#   meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
-#   
-#   individual <- key
-#   individual.split <- strsplit(individual, "\\_")
-#   meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
-#   meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
-#   meta[["Tissue"]] <- "gut"
-#   
-#   meta <- as.data.frame(meta)
-#   metas[[key]] <- meta
-# }
-
-cell_names <- colnames(data_matrix)
-cell_names.split <- strsplit(cell_names, "\\-")
-meta <- list()
-meta[["Original_cell_names"]] <- cell_names
-meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
-meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
-
-individual <- "GSM6614348_HC-1"
-individual.split <- strsplit(individual, "\\_")
-meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
-meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
-meta[["Tissue"]] <- "gut"
-
-meta <- as.data.frame(meta)
+# individual <- "GSM6614348_HC-1"
+# individual.split <- strsplit(individual, "\\_")
+# meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
+# meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
+# meta[["Tissue"]] <- "gut"
+# 
+# meta <- as.data.frame(meta)
 
 ```
 
@@ -313,34 +332,41 @@ To make cell ids compatible with other datasets, append the study ID at the begi
 ```{r modify_cellID}
 # Fields in prefix are separated by dots
 ID <- "GSE214695"
-# for(key in names(data_matrices)){
-#   prefix <- paste(ID, metas[[key]]$Individual, metas[[key]]$Tissue, metas[[key]]$Treatment, sep=".")
-#   
-#   # Adding new cell ids to raw data 
-#   cell_ids <- paste(prefix, metas[[key]]$Barcode, sep = '_') # Underscore delimits end of prefix
-#   colnames(data_matrices[[key]]) <- cell_ids
-#   
-#   # Adding new cell ids to metadata 
-#   rownames(metas[[key]]) <- cell_ids  
-# }
+for(key in names(data_matrices)){
+  prefix <- paste(ID, metas[[key]]$Individual, metas[[key]]$Tissue, metas[[key]]$Treatment, sep=".")
 
-prefix <- paste(ID, meta$Individual, meta$Tissue, meta$Treatment, sep=".")
+  # Adding new cell ids to raw data
+  cell_ids <- paste(prefix, metas[[key]]$Barcode, sep = '_') # Underscore delimits end of prefix
+  colnames(data_matrices[[key]]) <- cell_ids
 
-# Adding new cell ids to raw data
-cell_ids <- paste(prefix, meta$Barcode, sep = '_') # Underscore delimits end of prefix
-colnames(data_matrix) <- cell_ids
+  # Adding new cell ids to metadata
+  rownames(metas[[key]]) <- cell_ids
+}
 
-# Adding new cell ids to metadata
-rownames(meta) <- cell_ids
+# prefix <- paste(ID, meta$Individual, meta$Tissue, meta$Treatment, sep=".")
+# 
+# # Adding new cell ids to raw data
+# cell_ids <- paste(prefix, meta$Barcode, sep = '_') # Underscore delimits end of prefix
+# colnames(data_matrix) <- cell_ids
+# 
+# # Adding new cell ids to metadata
+# rownames(meta) <- cell_ids
 ```
 
 ```{r visual_new_cell_ids}
 data_matrix[1:10, 1:2]
 cat("\n")
-print(head(meta))
+print(head(metas[[1]]))
 ```
 
 ## Create Seurat object (custom)
+```{r Merge_matrices}
+data_matrix <- do.call(cbind, data_matrices)
+meta <- do.call(rbind, metas)
+
+all(rownames(meta) == colnames(data_matrix)) 
+colnames(meta)
+```
 
 ```{r Create_Seurat}
 # data_seurat_list <- list()
@@ -351,8 +377,8 @@ print(head(meta))
 #                                     project=ds_name,
 #                                     meta.data = metas[[key]],
 #                                     assay="RNA",
-#                                     min.cells = 0,
-#                                     min.features = 0)
+#                                     min.cells = 3,
+#                                     min.features = 10)
 #   data_seurat_list[[key]] <- data_seurat
 #   
 # }
@@ -368,14 +394,15 @@ data_seurat <- Seurat::CreateSeuratObject(counts=data_matrix,
                                     min.cells = 3,
                                     min.features = 10)
 
-rm(data_matrix, meta, prefix, cell_ids)
+rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas)
+# rm(data_matrix, meta, prefix, cell_ids)
 # free up rstudio memory
 gc() 
 ```
+
 ```{r seurat_ncell}
 print(length(Seurat::Cells(data_seurat)))
 ```
-
 
 ## 5. Standardize gene symbols
 
@@ -412,6 +439,9 @@ print(head(Seurat::Cells(data_seurat)))
 ### Clean cell metadata (custom)
 
 CHECK: cell metadata fields: Sample, Individual, Tissue c("blood","tumor","adjacent","LN","other"), Study, OriginalAnnotationLevel1, OriginalAnnotationLevel2, OriginalAnnotationLevel3... Factorize or change labels if needed.
+```{r}
+colnames(data_seurat@meta.data)
+```
 
 ```{r clean_metadata}
 data_seurat$orig.ident <- Seurat::Cells(data_seurat) #cell_ids
