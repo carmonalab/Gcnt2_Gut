@@ -1,0 +1,47 @@
+---
+title: "Comparison of Processing Output with the Author's"
+author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
+---
+
+# Downloading Processed Data
+```{r downloading_author_annotations}
+ds_name <- "SalasA_2023_GSE214695"
+
+author_annotations <- data.table::fread(file.path(ds_name, "data/GSE214695/GSE214695_cell_annotation.csv.gz"), header = TRUE)
+
+author_cells <- paste(author_annotations$sample, author_annotations$cell_id, sep = "_")
+cat(author_cells[1:8])
+```
+
+```{r downloading_processed_dataset}
+processed_seurat_object <- readRDS(file.path(ds_name, "output/SalasA_2023_GSE214695_whole.rds"))
+sample.split <- strsplit(as.vector(processed_seurat_object@meta.data$Sample), "\\-")
+sample <- paste0(sapply(sample.split, function(x) x[[1]]), sapply(sample.split, function(x) x[[2]]))
+processed_cells <- paste(sample, processed_seurat_object@meta.data$Original_cell_names , sep = "_")
+cat(processed_cells[1:8])
+```
+
+# Comparing Author's Cells and Processed Cells
+
+```{r comparing_lengths}
+cat("Author's number of cells after processing:", length(author_cells), "\n")
+cat("Our number of cells after processing:", length(processed_cells), "\n")
+cat("\n")
+cat("Number of duplicates in author's processing:", sum(duplicated(author_cells)), "\n")
+cat("Number of duplicates in our processing:", sum(duplicated(processed_cells)), "\n")
+```
+
+```{r comapring_contents}
+cat("The two processing results have", length(intersect(author_cells, processed_cells)), "cells in common.", "\n")
+cat("There are", length(setdiff(author_cells, processed_cells)), "cells that are only found in the author's processing.\n")
+cat("There are", length(setdiff(processed_cells, author_cells)), "cells that are only found in the our processing.\n")
+```
+
+# Additional Analysis of Author's Processing
+
+```{r counts_per_sample}
+cells.perSample <- table(author_annotations$sample)
+barplot(cells.perSample, las = 2)
+barplot(sort(cells.perSample), las = 2)
+```
+

@@ -240,6 +240,8 @@ Asses whether raw counts are available or only pre-normalized (eg log2TMP), if p
 ## 2. Make sure data matrix has genes as rows and cells as columns
 
 ```{r check_mtx}
+cat("Total number of detected cells in raw dataset:", sum(sapply(data_matrices, ncol)), "\n")
+cat("\n")
 cat(dim(data_matrix), "\n")
 cat("Number of columns:", ncol(data_matrix), "\n")
 cat("Number of rows:", nrow(data_matrix), "\n")
@@ -706,7 +708,7 @@ We will save the datasets with all high-quality cells (whole) and datasets witho
 ```{r remove_small_samples}
 # Visualize cell number cutoffs
 cells.perSample <- table(data_seurat$Sample)
-barplot(sort(cells.perSample))
+barplot(sort(cells.perSample), las = 2)
 abline(h=min.cells)
 abline(h=ds)
 

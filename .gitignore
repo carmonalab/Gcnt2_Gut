@@ -18,6 +18,8 @@ renv/
 # Knitted files from Rmarkdown 
 01_data_preprocessing.html
 01_data_preprocessing.pdf
+data_processing_comparison_author.html
+data_processing_comparison_author.pdf
 
 # Space-consuming datasets and files  
 datasets/
