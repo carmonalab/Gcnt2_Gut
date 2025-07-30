@@ -194,23 +194,23 @@ for(file in files){
 ```
 
 ```{r preprocessing}
-cat("Initial number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
-num_cells_i <- data.frame(patient = names(data_matrices), 
-                         cell_count = sapply(data_matrices, ncol))
-num_cells_i
-
-
-
-for(key in names(data_matrices)){
-  sums <- Matrix::colSums(data_matrices[[key]])
-  ind <- which(sums < 10)
-  data_matrices[[key]] <- data_matrices[[key]][, -ind]
-}
-
-cat("Final number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
-num_cells_f <- data.frame(patient = names(data_matrices), 
-                         cell_count = sapply(data_matrices, ncol))
-num_cells_f
+# cat("Initial number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
+# num_cells_i <- data.frame(patient = names(data_matrices), 
+#                          cell_count = sapply(data_matrices, ncol))
+# num_cells_i
+# 
+# 
+# 
+# for(key in names(data_matrices)){
+#   sums <- Matrix::colSums(data_matrices[[key]])
+#   ind <- which(sums < 10)
+#   data_matrices[[key]] <- data_matrices[[key]][, -ind]
+# }
+# 
+# cat("Final number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
+# num_cells_f <- data.frame(patient = names(data_matrices), 
+#                          cell_count = sapply(data_matrices, ncol))
+# num_cells_f
 ```
 RDS files
 
@@ -366,47 +366,59 @@ print(head(rownames(metas[[1]])))
 
 ## Create Seurat object (custom)
 ```{r Merge_matrices}
-data_matrix <- do.call(cbind, data_matrices)
-meta <- do.call(rbind, metas)
-
-rownames(meta) <- substr(rownames(meta), 17, length(rownames(meta)))
-
-all(rownames(meta) == colnames(data_matrix)) 
-colnames(meta)
-head(colnames(data_matrix))
-head(rownames(meta))
+# data_matrix <- do.call(cbind, data_matrices)
+# 
+# names(metas) <- NULL
+# meta <- do.call(rbind, metas)
+# 
+# # rownames(meta) <- substr(rownames(meta), 17, length(rownames(meta)))
+# 
+# all(rownames(meta) == colnames(data_matrix))
+# colnames(meta)
+# head(colnames(data_matrix))
+# head(rownames(meta))
 ```
 
 ```{r Create_Seurat}
-# data_seurat_list <- list()
-# 
-# for(key in names(data_matrices)){
-#   cat("Creating seurat object for", key)
-#   data_seurat <- Seurat::CreateSeuratObject(counts=data_matrices[[key]],
-#                                     project=ds_name,
-#                                     meta.data = metas[[key]],
-#                                     assay="RNA",
-#                                     min.cells = 3,
-#                                     min.features = 10)
-#   data_seurat_list[[key]] <- data_seurat
-#   
-# }
-# 
-# rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas, data_seurat)
-# # free up rstudio memory
-# gc() 
+seurat_list <- list()
 
-data_seurat <- Seurat::CreateSeuratObject(counts=data_matrix,
+for(key in names(data_matrices)){
+  cat("Creating seurat object for", key, "\n")
+  data_seurat <- Seurat::CreateSeuratObject(counts=data_matrices[[key]],
                                     project=ds_name,
-                                    meta.data = meta,
+                                    meta.data = metas[[key]],
                                     assay="RNA",
                                     min.cells = 3,
                                     min.features = 10)
+  seurat_list[[key]] <- data_seurat
 
-rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas)
-# rm(data_matrix, meta, prefix, cell_ids)
+}
+```
+
+```{r merging_seurat_objects}
+# Merge Seurat Objects
+# require(Seurat)
+names(seurat_list) <- NULL
+data_seurat <- SeuratObject:::merge.Seurat(seurat_list[[1]], seurat_list[-1])
+``` 
+
+
+```{r freeing_memeory}
 # free up rstudio memory
-gc() 
+rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas, seurat_list)
+gc()
+# 
+# data_seurat <- Seurat::CreateSeuratObject(counts=data_matrix,
+#                                     project=ds_name,
+#                                     meta.data = meta,
+#                                     assay="RNA",
+#                                     min.cells = 3,
+#                                     min.features = 10)
+# 
+# rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas)
+# # rm(data_matrix, meta, prefix, cell_ids)
+# # free up rstudio memory
+# gc() 
 ```
 
 ```{r seurat_ncell}
@@ -429,6 +441,7 @@ geneRef <- data.table::fread(geneRef_file)
 
 ```{r Standar_gene_Symbol}
 # Standarize gene symbols using STACAS
+data_seurat <- SeuratObject::JoinLayers(data_seurat, layers = "counts")
 data_seurat <- STACAS::StandardizeGeneSymbols(data_seurat, geneRef, assay = "RNA", slots = "counts")
 
 # adapt metafeatures
