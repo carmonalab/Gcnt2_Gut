@@ -30,7 +30,7 @@ renv::restore()
 
 ## Processing 📉 <a name="processing"></a>
 
-A quality control procedure was applied to the human scRNA-seq to single out healthy, normal cells and discard 
+A quality control procedure was applied to the human scRNA-seq dataset to single out healthy, normal cells and discard 
 extracellular droplets and vesicles or abnormal and dying cells. The table below shows the filtering indicators 
 that were used and their cutoffs.
 
@@ -45,7 +45,7 @@ that were used and their cutoffs.
 
 The quality control pipeline is found in **scRNAseq_data_processing_template.Rmd**. The pipeline displays plots 
 about various quality control metrics but also outputs the raw scRNA-seq dataset along with two processed scRNA-seq
-datasets: the quality control end-product and a lighter version.
+datasets: the quality control end product and a lighter version.
 
 For comparison statistics and graphs with the author's filtering procedure see **data_processing_comparison_author.Rmd** 
 

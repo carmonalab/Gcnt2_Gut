@@ -143,28 +143,6 @@ lapply(tar.files, function(f){
 })
 ```
 
--   Zenodo
-
-```{r download_Zenodo, eval=F}
-# require(zen4R)
-# 
-# if(length(list.files(path_input, "Zenodo"))==0){
-#    zenodo.doi <- "10.5281/zenodo.5461803"
-#    zenodo.dir <- paste0(input_data_path_root, "tar_Zenodo_Zheng")
-#    dir.create(zenodo.dir)
-#    download_zenodo(doi=zenodo.doi,
-#                    path = zenodo.dir
-#                  )
-# # untar expression datasets and metadata
-#   tar.zenodo.files <- list.files(zenodo.dir,
-#                                 "tar",
-#                                 full.names = T) %>% 
-#                       # apply filter to files needed
-#                       grep("expression|meta",., value = T, ignore.case = T)
-#   lapply(tar.zenodo.files, untar)
-# }
-```
-
 # Load Data
 
 Depending on the data format at GEO or Zenodo, use different tools to load the datasets into the environment.
@@ -185,38 +163,6 @@ for(file in files){
 
   data_matrices[[substr(prefix, 1, 15)]] <- data_matrix
 }
-
-# prefix <- "GSM6614348_HC-1_"
-# data_matrix <- Seurat::ReadMtx(mtx = sprintf("%s/%smatrix.mtx.gz", fpath, prefix),
-#                   cells = sprintf("%s/%sbarcodes.tsv.gz", fpath, prefix),
-#                   features = sprintf("%s/%sfeatures.tsv.gz", fpath, prefix),
-#                   cell.column = 1, feature.column = 1)
-```
-
-```{r preprocessing}
-# cat("Initial number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
-# num_cells_i <- data.frame(patient = names(data_matrices), 
-#                          cell_count = sapply(data_matrices, ncol))
-# num_cells_i
-# 
-# 
-# 
-# for(key in names(data_matrices)){
-#   sums <- Matrix::colSums(data_matrices[[key]])
-#   ind <- which(sums < 10)
-#   data_matrices[[key]] <- data_matrices[[key]][, -ind]
-# }
-# 
-# cat("Final number of cells of patient 1: ", ncol(data_matrices[[1]]), "\n")
-# num_cells_f <- data.frame(patient = names(data_matrices), 
-#                          cell_count = sapply(data_matrices, ncol))
-# num_cells_f
-```
-RDS files
-
-```{r load_rds, eval=F}
-# list.rds <- list.files(input_data_path_root, "[.]rds$", full.names = T)
-# list.seurat <- lapply(list.rds, readRDS) 
 ```
 
 **CHECK**:
@@ -254,8 +200,6 @@ cat("\n")
 cat(sample(colnames(data_matrix), 3), "\n")
 cat(sample(rownames(data_matrix), 3), "\n")
 cat("\n")
-# cat(length(readLines(sprintf("%s/GSM6614348_HC-1_barcodes.tsv.gz", fpath))), "\n")
-# cat(length(readLines(sprintf("%s/GSM6614348_HC-1_features.tsv.gz", fpath))), "\n")
 ```
 
 ## 3. Include, adapt and standarize cell metadata
@@ -285,7 +229,7 @@ Generate a metadata dataframe including the following variables for each cell in
 +----------------------------+------------------------------------+
 
 ```{r adapt_meta}
-# Explore data and modifiy this code accordinly to fill the metadata slots
+# Explore data and modifiy this code accordingly to fill the metadata slots
 metas <- list()
 
 for(key in names(data_matrices)){
@@ -295,7 +239,6 @@ for(key in names(data_matrices)){
   meta <- list()
   meta[["Original_cell_names"]] <- cell_names
   meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
-  # meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
 
   individual <- key
   individual.split <- strsplit(individual, "\\_")
@@ -307,22 +250,6 @@ for(key in names(data_matrices)){
   meta <- as.data.frame(meta)
   metas[[key]] <- meta
 }
-
-# cell_names <- colnames(data_matrix)
-# cell_names.split <- strsplit(cell_names, "\\-")
-# meta <- list()
-# meta[["Original_cell_names"]] <- cell_names
-# meta[["Barcode"]] <- sapply(cell_names.split, function(x) x[[1]])
-# meta[["Sample"]] <- sapply(cell_names.split, function(x) x[[2]])
-# 
-# individual <- "GSM6614348_HC-1"
-# individual.split <- strsplit(individual, "\\_")
-# meta[["Treatment"]] <- sapply(individual.split, function(x) substr(x[[2]], 1, 2))
-# meta[["Individual"]] <- sapply(individual.split, function(x) x[[1]])
-# meta[["Tissue"]] <- "gut"
-# 
-# meta <- as.data.frame(meta)
-
 ```
 
 ```{r visual_metadata}
@@ -347,15 +274,6 @@ for(key in names(data_matrices)){
   # Adding new cell ids to metadata
   rownames(metas[[key]]) <- cell_ids
 }
-
-# prefix <- paste(ID, meta$Individual, meta$Tissue, meta$Treatment, sep=".")
-# 
-# # Adding new cell ids to raw data
-# cell_ids <- paste(prefix, meta$Barcode, sep = '_') # Underscore delimits end of prefix
-# colnames(data_matrix) <- cell_ids
-# 
-# # Adding new cell ids to metadata
-# rownames(meta) <- cell_ids
 ```
 
 ```{r visual_new_cell_ids}
@@ -367,19 +285,6 @@ print(head(rownames(metas[[1]])))
 ```
 
 ## Create Seurat object (custom)
-```{r Merge_matrices}
-# data_matrix <- do.call(cbind, data_matrices)
-# 
-# names(metas) <- NULL
-# meta <- do.call(rbind, metas)
-# 
-# # rownames(meta) <- substr(rownames(meta), 17, length(rownames(meta)))
-# 
-# all(rownames(meta) == colnames(data_matrix))
-# colnames(meta)
-# head(colnames(data_matrix))
-# head(rownames(meta))
-```
 
 ```{r Create_Seurat}
 seurat_list <- list()
@@ -399,28 +304,15 @@ for(key in names(data_matrices)){
 
 ```{r merging_seurat_objects}
 # Merge Seurat Objects
-# require(Seurat)
 names(seurat_list) <- NULL
 data_seurat <- SeuratObject:::merge.Seurat(seurat_list[[1]], seurat_list[-1])
 ``` 
 
 
-```{r freeing_memeory}
+```{r freeing_memory}
 # free up rstudio memory
 rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas, seurat_list)
 gc()
-# 
-# data_seurat <- Seurat::CreateSeuratObject(counts=data_matrix,
-#                                     project=ds_name,
-#                                     meta.data = meta,
-#                                     assay="RNA",
-#                                     min.cells = 3,
-#                                     min.features = 10)
-# 
-# rm(data_matrix, meta, cell_ids, prefix, data_matrices, metas)
-# # rm(data_matrix, meta, prefix, cell_ids)
-# # free up rstudio memory
-# gc() 
 ```
 
 ```{r seurat_ncell}
@@ -442,12 +334,12 @@ geneRef <- data.table::fread(geneRef_file)
 ```
 
 ```{r Standar_gene_Symbol}
-# Standarize gene symbols using STACAS
+# Standardize gene symbols using STACAS
 data_seurat <- SeuratObject::JoinLayers(data_seurat, layers = "counts")
 data_seurat <- STACAS::StandardizeGeneSymbols(data_seurat, geneRef, assay = "RNA", slots = "counts")
 
-# adapt metafeatures
-# there incompatibilites with newer version of STACAS and Seurat v5
+# adapt meta features
+# there incompatibilities with newer version of STACAS and Seurat v5
 data_seurat[["RNA"]]@meta.features <- data.frame(row.names = rownames(data_seurat))
 ```
 
@@ -473,9 +365,6 @@ data_seurat$Sample <- factor(data_seurat$Sample)
 data_seurat$Individual <- factor(data_seurat$Individual)
 data_seurat$Tissue <- factor(data_seurat$Tissue)
 data_seurat$Tissue <- dplyr::recode(data_seurat$Tissue, b = "blood", t = "tumor", g = "gut")
-#data_seurat$OriginalAnnotationLevel1 <- 
-#data_seurat$OriginalAnnotationLevel2 <- 
-#data_seurat$OriginalAnnotationLevel3 <- 
 head(data_seurat)
 ```
 
@@ -503,44 +392,7 @@ if ( all.equal(rownames(features_meta_data),
 print(head(data_seurat[["RNA"]]@meta.features))
 ```
 
-## 7. Load and store patient metadata
-
-Get metadata files from GEO, Zenodo or supplementary material from original publication.
-
-We have expanded the Seurat datastructure to include "batch.metadata" in @misc
-
-Standardize per-sample/patient attributes when available:
-
--   `ID`: It will allow connect per-patient metadata with main database.
--   `Patient.ID`
--   `Sample` (it may be the same as `Patient.ID` if only one sample per patient)
--   `Disease`: including cancer type or condition
--   `Tissue`
--   `Treatment`: if applicable
--   `Enrichment`: unbiased, CD45+...
--   `N_cells_whole`: integer
--   `N_cells_light`: integer
--   `Technology`: 10X, Smart-seq2, MARS-seq...
--   `Age`
--   `Sex`
--   `...`
-
-```{r load_batch_metadata}
-# # Path to patient metadata
-# fpath <- "~/Dropbox/CSI/Standardized_SingleCell_Datasets/ZhangY_2022_34653365/data/"
-# individual_metadata <- read.csv(sprintf("%s/samples_metadata.csv",fpath))
-# rownames(individual_metadata) <- individual_metadata$Patient.ID
-# 
-# # check that patient metadata contain only the patients included in the sc object
-# individual_metadata <- individual_metadata[individual_metadata$Patient.ID %in%
-#                                           unique(data_seurat@meta.data$Individual),]
-# individual_metadata <- individual_metadata[order(individual_metadata$Patient.ID),]
-# 
-# # Expand Seurat data structure to add `batch.metadata` in `@misc`.
-# data_seurat@misc$batch.metadata <- list()
-# data_seurat@misc$batch.metadata$Individual <- individual_metadata
-# head(data_seurat@misc$batch.metadata)
-```
+## 7. Normalize Data
 
 CHECK are data pre-normalized? decide whether to Normalize
 
@@ -575,8 +427,6 @@ QC-based metric is mostly done manually by inspecting the distribution of the QC
 
 Here are shown some guidelines for QC-based filtering:
 
-\|--------------------------------------\|---------------------------------------------------------------------\| \| QC metric \| Guidelines for filtering \| \|--------------------------------------\|---------------------------------------------------------------------\| \| Ribosomal content \| \> 0.5% & \< 60% \| \| Mitochondrial content \| \< 10-20% \| \| Number of genes/features (nFeatures) \| \>400 and custom upper limit based on your data \| \| Number of counts/UMI (nCount) \| \>800 and custom and custom upper limit based on your data \| \| Ratio Features/Counts \| \> 0.6 \| \| Special genes \| Custom: Consider remove some of these genes for downstream analysis \| \| Special genes \| E.g. MALAT1 \| \|--------------------------------------\|---------------------------------------------------------------------\|
-
 | QC metric                           | Guidelines for filtering                                  |
 |-------------------------------------|-----------------------------------------------------------|
 | Ribosomal content                   | > 0.5% & < 60%                                            |
@@ -607,10 +457,6 @@ Seurat::VlnPlot(data_seurat,
                      "percent.ribo","percent.mito",
                      "PTPRC","MALAT1"),
         ncol = 3, pt.size=0)
-# print(sum(is.na(data_seurat$percent.ribo)))
-# print(sum(is.na(data_seurat$percent.mito)))
-
-# data_seurat <- subset(data_seurat, subset = !is.na(percent.ribo) & !is.na(percent.mito))
 ```
 
 ### Custom thresholds
@@ -683,7 +529,6 @@ message(paste("Original number of cells:", initialCellNum))
 data_seurat <- subset(data_seurat, subset = 
                         nFeature_RNA >= cutoffs[["nFeature_RNA"]]["min"] &
                         nFeature_RNA < cutoffs[["nFeature_RNA"]]["max"] & 
-                        # raw counts present??
                         nCount_RNA   >= cutoffs[["nCount_RNA"]]["min"]   & 
                         nCount_RNA   < cutoffs[["nCount_RNA"]]["max"]   &  
                         percent.ribo >= cutoffs[["percent.ribo"]]["min"] & 
@@ -763,13 +608,6 @@ barplot(sample.size.filterRatio[names(sort(sample.size.post))], las=2)
 ```{r}
 saveRDS(data_seurat,file.path(output_data_path,paste0(ds_name,"_whole.rds")))
 saveRDS(data_seurat.ds,file.path(output_data_path,paste0(ds_name,"_light.rds")))
-```
-
-# Export patient/sample metadata
-
-```{r}
-# write.csv(individual_metadata,
-#           file.path(output_data_path,paste0(ds_name,"individual_metadata.csv")))
 ```
 
 # Consider saving as H5 (<https://github.com/mojaveazure/seurat-disk>) for interoperability with Bioconductor and Python; eg SaveH5Seurat()
