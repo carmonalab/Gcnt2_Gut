@@ -217,10 +217,10 @@ Finally, we display an expression heatmap for the top 10 markers for each cluste
 cmc.markers %>%
   group_by(cluster) %>%
   dplyr::filter(avg_log2FC > 1) %>%
-  arrange(p_val_adj)
+  arrange(p_val_adj) %>%
   slice_head(n = 10) %>%
   ungroup() -> top10
-DoHeatmap(cmc, features = top10$gene) + NoLegend()
+Seurat::DoHeatmap(cmc, features = top10$gene) + Seurat::NoLegend()
 ```
 
 
