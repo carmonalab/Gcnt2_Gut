@@ -1,0 +1,232 @@
+---
+title: "Comparison of Processing Output with the Author's"
+author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
+---
+
+# Downloading Processed Data
+
+```{r downloading_processed_dataset}
+ds_name <- "SalasA_2023_GSE214695"
+
+# cmc stands for colonic mucosa cells
+cmc <- readRDS(file.path(ds_name, "output/SalasA_2023_GSE214695_whole.rds"))
+```
+
+# Finding Variable Genes
+
+This section finds the 2000 most variable genes across the cells in the dataset.
+
+We can vary the selection method: "vst", "mean.var.plot", and "dispersion". "mean.var.plot" does 
+not work and demands the empirical determination of two more parameters, namely "num.bin" and
+"binning.method".
+
+```{r find-var_genes}
+cmc <- Seurat::FindVariableFeatures(cmc, selection.method = "dispersion", nfeatures = 2000)
+
+top_5 <- head(SeuratObject::VariableFeatures(cmc), 5)
+plot_1 <- Seurat::VariableFeaturePlot(cmc)
+plot_1 <- Seurat::LabelPoints(plot = plot_1, points = top_5, repel = TRUE, xnudge = 0, ynudge = 0)
+plot_1
+```
+
+# Scaling the Data
+
+This step scales gene expression, to a normal distributions, across cells such that downstream 
+analyses are not biased by highly-expressed genes.
+
+Let us also play around with the "vars.to.regress" parameter. We can decide to include "percent.mt"
+and/or "percent.rb"
+
+```{r scale_data}
+cmc <- Seurat::ScaleData(cmc, vars.to.regress = c("percent.mito", "percent.ribo"))
+```
+
+# Principal Component Analysis (PCA)
+
+## Running PCA
+
+```{r pca}
+cmc <- Seurat::RunPCA(cmc, features = SeuratObject::VariableFeatures(cmc), verbose = FALSE)
+```
+
+## Visualizing and Examining PCAs
+
+We begin by examining the loadings of the first 5 PCs.
+
+```{r pca_loadings}
+print(cmc[["pca"]], dims = 1:6, nfeatures = 5)
+
+Seurat::VizDimLoadings(cmc, dims = 1:2, nfeatures = 15)
+Seurat::VizDimLoadings(cmc, dims = 3:4, nfeatures = 15)
+Seurat::VizDimLoadings(cmc, dims = 5:6, nfeatures = 15)
+```
+
+Then, we look at the **Dimension Plot** to visualize how the first two PCs separate the cells 
+in our dataset.
+
+```{r dim_plot}
+Seurat::DimPlot(cmc, dims = c(1, 2), reduction = "pca")
+```
+
+Finally, let us vsiaulize the PCs in a **Dimension Heatmap**.
+
+```{r dim_heatmap, fig.height=20, fig.show='hold'}
+Seurat::DimHeatmap(cmc, dims = 1:9, cells = 1000, balanced = TRUE)
+Seurat::DimHeatmap(cmc, dims = 10:18, cells = 1000, balanced = TRUE)
+```
+
+## Dimensionality of thhe Dataset
+
+We use the **Elbow plot** and thus the **Elbow method** to determine how many PCs we 
+keep for downstream analyses. 
+
+```{r elbow_plot}
+Seurat::ElbowPlot(cmc, ndims = 32)
+```
+
+Since it is better to err on the higher side of chosen PCs, we will use 15 dimensions 
+for all downstream analyses.
+
+# Cell Clustering
+
+## Graph Clustering (KNN)
+
+Let us see how many cell types the author has at the end of his clustering to better choose
+our resolution parameter.
+
+```{r}
+author_annotations <- data.table::fread(file.path(ds_name, "data/GSE214695/GSE214695_cell_annotation.csv.gz"), header = TRUE)
+cat("Number of distinct cell types in author's annotations:", length(unique(author_annotations$annotation)))
+```
+
+For the clustering, we use the Leiden algorithm and various resolutions: 0.3, 0.6, and 0.8.
+
+```{r graph_clustering}
+cmc <- Seurat::FindNeighbors(cmc, dims = 1:15)
+cmc <- Seurat::FindClusters(cmc, resolution = c(0.3, 0.6, 0.8), algorithm = 4, random.seed = 42)
+```
+
+UMAP for resolution equal to 0.8.
+
+```{r umap_res_1}
+Seurat::Idents(cmc) <- "RNA_snn_res.0.8"
+cmc <- Seurat::RunUMAP(cmc, dims = 1:15, seed.use = 42)
+Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) 
+```
+
+UMAP for resolution equal to 0.6.
+
+
+```{r umap_res_2}
+Seurat::Idents(cmc) <- "RNA_snn_res.0.6"
+cmc <- Seurat::RunUMAP(cmc, dims = 1:15, seed.use = 42)
+Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) 
+```
+
+UMAP for resolution equal to 0.3.
+
+
+```{r umap_res_3}
+Seurat::Idents(cmc) <- "RNA_snn_res.0.3"
+cmc <- Seurat::RunUMAP(cmc, dims = 1:15, seed.use = 42)
+Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) 
+```
+
+For downstream analyses, we choose the resolution of 0.3.
+
+```{r res}
+res <- 0.3
+Seurat::Idents(cmc) <- sprintf("RNA_snn_res.%.1f", 0.3)
+```
+
+
+# Differentially Expressed Genes
+
+## Identifying Positive Differentially Expressed Genes per Cluster
+
+Below, we seek to find the positive differentially expressed genes for a given cluster. The top positive differentially expressed genes per cluster will enable the cluster annotation.
+
+```{r find_DE}
+for (i in 1:length(unique(Seurat::Idents(cmc)))){
+  cluster.markers <- sprintf("cluster%.0f.markers", i)
+  assign(cluster.markers, Seurat::FindMarkers(cmc, ident.1 = i, test.use = "wilcox", 
+                                         only.pos = TRUE))
+}
+```
+
+The cell below displays the positive differentially expressed genes per cluster.
+
+```{r display_DE}
+for (i in 1:length(unique(Seurat::Idents(cmc)))){
+  print(get(sprintf("cluster%.0f.markers", i)))
+}
+```
+
+Now, we find the positive differentially expressed genes for all clusters.
+
+```{r find_all_markers}
+cmc.markers <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", only.pos = TRUE)
+```
+
+## Visualizing Top Differentially Expressed Genes across Clusters
+
+Let us first create violin plots for the top 4 positive differentially expressed genes per cluster. The violin plots will then illustrate how these genes vary across clusters. 
+
+```{r violin_plots_DE}
+for (i in 1:length(unique(Seurat::Idents(cmc)))){
+  cluster_of_interest <- get(sprintf("cluster%.0f.markers", i))
+  top_4_DE_genes <- rownames(head(cluster_of_interest, 4))
+  plots <- lapply(top_4_DE_genes, function(gene) {
+  Seurat::VlnPlot(cmc, features = gene) + xlab("Clusters") + Seurat::NoLegend()
+})
+  combined <- patchwork::wrap_plots(plots, ncol = 2)
+  print(combined)
+}
+```
+
+Next, we display feature plots for each cluster's top positive differentially expressed gene. These plots will help us visualize how restricted the expression of these top positive differentially expressed genes is to their cluster.
+
+
+```{r summary_feature_plot_DE, fig.height=16, fig.width=9}
+top_DE_genes <- c()
+
+for (i in 1:length(unique(Seurat::Idents(cmc)))){
+  cluster_of_interest <- get(sprintf("cluster%.0f.markers", i))
+  top_1_DE_gene <- rownames(head(cluster_of_interest, 1))
+  top_DE_genes <- c(top_DE_genes, top_1_DE_gene)
+}
+
+plots <- lapply(top_DE_genes, function(gene){
+  Seurat::FeaturePlot(cmc, features = gene) + Seurat::NoLegend()
+})
+combined <- patchwork::wrap_plots(plots, ncol = 3, nrow = 5)
+print(combined)
+```
+
+```{r feature_plots}
+for (i in 1:length(unique(Seurat::Idents(cmc)))){
+  cluster_of_interest <- get(sprintf("cluster%.0f.markers", i))
+  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[i]]) + ggtitle(paste(top_DE_genes[[i]], sprintf("Cluster %.0f", i), sep = " ")))
+}
+```
+
+
+Finally, we display an expression heatmap for the top 10 markers for each cluster.
+
+```{r heatmap_DE}
+cmc.markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  arrange(p_val_adj)
+  slice_head(n = 10) %>%
+  ungroup() -> top10
+DoHeatmap(cmc, features = top10$gene) + NoLegend()
+```
+
+
+
+
+
+
+
+

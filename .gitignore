@@ -13,13 +13,15 @@ renv/
 .Rhistory
 .RData
 .Ruserdata
-.Renviron
+.Renviron 
 
 # Knitted files from Rmarkdown 
-01_data_preprocessing.html
-01_data_preprocessing.pdf
+scRNAseq_data_processing_template.html
+scRNAseq_data_processing_template.pdf
 data_processing_comparison_author.html
 data_processing_comparison_author.pdf
+cell_clustering.html
+cell_clustering.pdf
 
 # Space-consuming datasets and files  
 datasets/
