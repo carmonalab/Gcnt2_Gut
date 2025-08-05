@@ -46,7 +46,8 @@ cmc <- Seurat::ScaleData(cmc, vars.to.regress = c("percent.mito", "percent.ribo"
 ## Running PCA
 
 ```{r pca}
-cmc <- Seurat::RunPCA(cmc, features = SeuratObject::VariableFeatures(cmc), verbose = FALSE)
+cmc <- Seurat::RunPCA(cmc, features = SeuratObject::VariableFeatures(cmc), verbose = FALSE, 
+                      seed.use = 42)
 ```
 
 ## Visualizing and Examining PCAs
@@ -223,10 +224,65 @@ cmc.markers %>%
 Seurat::DoHeatmap(cmc, features = top10$gene) + Seurat::NoLegend()
 ```
 
+# Cluster Annotation
 
+## Further Investigations 
 
+When ordered by p-value, the top positive differentially expressed genes for cluster 14 are mitochondrial genes. Thus, we are wondering whether this cluster represents low quality cells that have slipped through our quality control. 
 
+```{r cluster_14}
+Seurat::VlnPlot(cmc, features = "percent.mito") + Seurat::NoLegend()
 
+cmc$cluster_14 = ifelse(Seurat::Idents(cmc) == "14", "Cluster 14", "Other")
 
+Seurat::VlnPlot(cmc, features = "percent.mito", cols = c("Cluster 14" = "blue", "Other" = "lightgrey"), group.by = "cluster_14")
+
+Seurat::FeatureScatter(cmc, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = "cluster_14") +
+  ggplot2::scale_color_manual(values = c("Cluster 14" = "blue", "Other" = "lightgrey"))
+```
+
+From the above plots, one can see that cluster 14 has low RNA and feature counts but an elevated mitochondrial content.
+
+```{r DE_genes_cluster_14}
+cluster14.markers %>%
+  filter(p_val_adj < 0.05) %>%
+  arrange(desc(avg_log2FC)) -> cluster14.markers.logFC
+
+cluster14.markers.logFC
+```
+
+Moreover, when ordered by avg_log2FC, the top positive differentially expressed genes for cluster 14 do not point towards any plausible cell type found in the colonic mucosa. Hence, cluster 14 is probably filled with low quality cells that we will discard. That is, we will subset our Seurat object so that the cells of cluster 14 do not appear in downstream analyses.
+
+```{r}
+cured_cmc <- subset(cmc, subset = cluster_14 != "Cluster 14")
+
+cmc$cluster_14 <- NULL
+cured_cmc$cluster_14 <- NULL
+```
+
+## scGate Classification
+
+```{r scGate_model}
+models.DB <- scGate::get_scGateDB()
+models.list <- models.DB$human
+gating_model <- models.list$HiTME
+cured_cmc <- scGate::scGate(cured_cmc, model = gating_model, ncores = 3)
+table(cured_cmc$scGate_multi, useNA = "ifany")
+```
+
+Let us quickly visualize the obtained scGate classification on our Umap.
+
+```{r scGate_classification_plot}
+Seurat::FeaturePlot(cured_cmc, features = "scGate_multi")
+```
+
+Now, we create a stacked barplot to analyze which cell types, obtained from the scGate classification, the clusters map to.
+
+```{r classification_to_cluster}
+dittoSeq::dittoBarPlot(
+    object = cured_cmc,
+    var = "RNA_snn_res.0.3",
+    group.by = "scGate_multi")
+```
 
 

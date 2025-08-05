@@ -476,14 +476,14 @@ print(cutoffs)
 
 ### Filter out outliers & low quality cells (custom)
 
-```{r qc_plots}
+```{r qc_plots, fig.height=10}
 source("Rutils/functions.R")
 
 Seurat::Idents(data_seurat) <- "Sample"
 Seurat::VlnPlot(data_seurat,
         features = c("nFeature_RNA", "nCount_RNA",
                      "percent.ribo","percent.mito",
-                     "MALAT1"),
+                     "PTPRC", "MALAT1"),
         ncol = 3, pt.size=0)
 
 # Adding MALAT1 expression data to Seurat object metadata

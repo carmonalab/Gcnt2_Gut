@@ -27,6 +27,9 @@ open the project through the **Gcnt2_Gut.Rproj** file and execute the following 
 renv::activate()
 renv::restore()
 ```
+For ease, these commands have already been added to a code cell in **scRNAseq_data_processing_template.Rmd**, the
+first file in the workflow. Hence, if you run this file first, as it is intended, there is no need to run these 
+commands again elsewhere.
 
 ## Processing 📉 <a name="processing"></a>
 
