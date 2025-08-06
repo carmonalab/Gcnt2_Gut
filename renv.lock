@@ -1613,6 +1613,48 @@
       "RemoteRef": "master",
       "RemoteSha": "e3d02c6208272b8f29beb90cdb581d3a3bf820f1"
     },
+    "SingleCellExperiment": {
+      "Package": "SingleCellExperiment",
+      "Version": "1.30.1",
+      "Source": "Bioconductor",
+      "Date": "2025-04-05",
+      "Title": "S4 Classes for Single Cell Data",
+      "Authors@R": "c( person(\"Aaron\", \"Lun\", role=c(\"aut\", \"cph\"), email=\"infinite.monkeys.with.keyboards@gmail.com\"), person(\"Davide\",\"Risso\", role=c(\"aut\",\"cre\", \"cph\"), email=\"risso.davide@gmail.com\"), person(\"Keegan\", \"Korthauer\", role=\"ctb\"), person(\"Kevin\", \"Rue-Albrecht\", role=\"ctb\"), person(\"Luke\", \"Zappia\", role = \"ctb\", comment = c(ORCID = \"0000-0001-7744-8565\", github = \"lazappi\")))",
+      "Depends": [
+        "SummarizedExperiment"
+      ],
+      "Imports": [
+        "methods",
+        "utils",
+        "stats",
+        "S4Vectors",
+        "BiocGenerics",
+        "GenomicRanges",
+        "DelayedArray"
+      ],
+      "Suggests": [
+        "testthat",
+        "BiocStyle",
+        "knitr",
+        "rmarkdown",
+        "Matrix",
+        "scRNAseq (>= 2.9.1)",
+        "Rtsne"
+      ],
+      "biocViews": "ImmunoOncology, DataRepresentation, DataImport, Infrastructure, SingleCell",
+      "Description": "Defines a S4 class for storing data from single-cell experiments. This includes specialized methods to store and retrieve spike-in information, dimensionality reduction coordinates and size factors for each cell, along with the usual metadata for genes and libraries.",
+      "License": "GPL-3",
+      "VignetteBuilder": "knitr",
+      "RoxygenNote": "7.3.2",
+      "git_url": "https://git.bioconductor.org/packages/SingleCellExperiment",
+      "git_branch": "RELEASE_3_21",
+      "git_last_commit": "06f6ced",
+      "git_last_commit_date": "2025-05-05",
+      "Repository": "Bioconductor 3.21",
+      "NeedsCompilation": "no",
+      "Author": "Aaron Lun [aut, cph], Davide Risso [aut, cre, cph], Keegan Korthauer [ctb], Kevin Rue-Albrecht [ctb], Luke Zappia [ctb] (ORCID: <https://orcid.org/0000-0001-7744-8565>, github: lazappi)",
+      "Maintainer": "Davide Risso <risso.davide@gmail.com>"
+    },
     "SparseArray": {
       "Package": "SparseArray",
       "Version": "1.8.0",
@@ -1764,6 +1806,57 @@
       "NeedsCompilation": "no",
       "Author": "Hervé Pagès [aut, cre]",
       "Maintainer": "Hervé Pagès <hpages.on.github@gmail.com>"
+    },
+    "UCell": {
+      "Package": "UCell",
+      "Version": "2.13.1",
+      "Source": "GitHub",
+      "Type": "Package",
+      "Title": "Rank-based signature enrichment analysis for single-cell data",
+      "Authors@R": "c( person('Massimo', 'Andreatta',  email = 'massimo.andreatta@unige.ch', role = c('aut','cre'), comment = c(ORCID = '0000-0002-8036-2647')), person('Santiago', 'Carmona',  email = 'santiago.carmona@unige.ch', role = c('aut'), comment = c(ORCID = '0000-0002-2495-0671')) )",
+      "Description": "UCell is a package for evaluating gene signatures in single-cell datasets.  UCell signature scores, based on the Mann-Whitney U statistic, are robust to dataset size and heterogeneity, and their calculation demands less computing time and memory than other available methods, enabling the processing of large datasets in a few minutes even on machines with limited computing power. UCell can be applied to any single-cell data matrix, and includes functions to directly interact with SingleCellExperiment and Seurat objects.",
+      "Depends": [
+        "R(>= 4.3.0)"
+      ],
+      "Imports": [
+        "methods",
+        "data.table(>= 1.13.6)",
+        "Matrix",
+        "stats",
+        "BiocParallel",
+        "BiocNeighbors",
+        "SingleCellExperiment",
+        "SummarizedExperiment"
+      ],
+      "Suggests": [
+        "scater",
+        "scRNAseq",
+        "reshape2",
+        "patchwork",
+        "ggplot2",
+        "BiocStyle",
+        "Seurat(>= 5.0.0)",
+        "SeuratObject(>= 5.0.0)",
+        "knitr",
+        "rmarkdown"
+      ],
+      "biocViews": "SingleCell, GeneSetEnrichment, Transcriptomics, GeneExpression, CellBasedAssays",
+      "VignetteBuilder": "knitr",
+      "BugReports": "https://github.com/carmonalab/UCell/issues",
+      "URL": "https://github.com/carmonalab/UCell",
+      "License": "GPL-3 + file LICENSE",
+      "Encoding": "UTF-8",
+      "LazyData": "FALSE",
+      "Roxygen": "list(markdown = TRUE)",
+      "RoxygenNote": "7.3.2",
+      "Author": "Massimo Andreatta [aut, cre] (ORCID: <https://orcid.org/0000-0002-8036-2647>), Santiago Carmona [aut] (ORCID: <https://orcid.org/0000-0002-2495-0671>)",
+      "Maintainer": "Massimo Andreatta <massimo.andreatta@unige.ch>",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "carmonalab",
+      "RemoteRepo": "UCell",
+      "RemoteRef": "master",
+      "RemoteSha": "e31e956cff841c26195de543902946c18b41c39c"
     },
     "XML": {
       "Package": "XML",
@@ -2696,6 +2789,65 @@
       "Author": "Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), Antoine Lucas [ctb], Jarek Tuszynski [ctb], Henrik Bengtsson [ctb] (<https://orcid.org/0000-0002-7579-5165>), Simon Urbanek [ctb] (<https://orcid.org/0000-0003-2297-1732>), Mario Frasca [ctb], Bryan Lewis [ctb], Murray Stokely [ctb], Hannes Muehleisen [ctb], Duncan Murdoch [ctb], Jim Hester [ctb], Wush Wu [ctb] (<https://orcid.org/0000-0001-5180-0567>), Qiang Kou [ctb] (<https://orcid.org/0000-0001-6786-5453>), Thierry Onkelinx [ctb] (<https://orcid.org/0000-0001-8804-4216>), Michel Lang [ctb] (<https://orcid.org/0000-0001-9754-0393>), Viliam Simko [ctb], Kurt Hornik [ctb] (<https://orcid.org/0000-0003-4198-9911>), Radford Neal [ctb] (<https://orcid.org/0000-0002-2473-3407>), Kendon Bell [ctb] (<https://orcid.org/0000-0002-9093-8312>), Matthew de Queljoe [ctb], Dmitry Selivanov [ctb], Ion Suruceanu [ctb], Bill Denney [ctb], Dirk Schumacher [ctb], András Svraka [ctb], Sergey Fedorov [ctb], Will Landau [ctb] (<https://orcid.org/0000-0003-1878-3253>), Floris Vanderhaeghe [ctb] (<https://orcid.org/0000-0002-6378-6229>), Kevin Tappe [ctb], Harris McGehee [ctb], Tim Mastny [ctb], Aaron Peikert [ctb] (<https://orcid.org/0000-0001-7813-818X>), Mark van der Loo [ctb] (<https://orcid.org/0000-0002-9807-4686>), Chris Muir [ctb] (<https://orcid.org/0000-0003-2555-3878>), Moritz Beller [ctb] (<https://orcid.org/0000-0003-4852-0526>), Sebastian Campbell [ctb], Winston Chang [ctb] (<https://orcid.org/0000-0002-1576-2126>), Dean Attali [ctb] (<https://orcid.org/0000-0002-5645-3493>), Michael Chirico [ctb] (<https://orcid.org/0000-0003-0787-087X>), Kevin Ushey [ctb]",
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
       "Repository": "CRAN"
+    },
+    "dittoSeq": {
+      "Package": "dittoSeq",
+      "Version": "1.20.0",
+      "Source": "Bioconductor",
+      "Type": "Package",
+      "Title": "User Friendly Single-Cell and Bulk RNA Sequencing Visualization",
+      "Authors@R": "c(person(\"Daniel\", \"Bunis\", email = \"daniel.bunis@ucsf.edu\", role=c(\"aut\", \"cre\")), person(\"Jared\", \"Andrews\", email = \"jared.andrews07@gmail.com\", role=c(\"aut\", \"ctb\")))",
+      "Description": "A universal, user friendly, single-cell and bulk RNA sequencing visualization toolkit that allows highly customizable creation of color blindness friendly, publication-quality figures. dittoSeq accepts both SingleCellExperiment (SCE) and Seurat objects, as well as the import and usage, via conversion to an SCE, of SummarizedExperiment or DGEList bulk data. Visualizations include dimensionality reduction plots, heatmaps, scatterplots, percent composition or expression across groups, and more. Customizations range from size and title adjustments to automatic generation of annotations for heatmaps, overlay of trajectory analysis onto any dimensionality reduciton plot, hidden data overlay upon cursor hovering via ggplotly conversion, and many more. All with simple, discrete inputs. Color blindness friendliness is powered by legend adjustments (enlarged keys), and by allowing the use of shapes or letter-overlay in addition to the carefully selected dittoColors().",
+      "License": "MIT + file LICENSE",
+      "Encoding": "UTF-8",
+      "LazyData": "true",
+      "RoxygenNote": "7.3.1",
+      "Depends": [
+        "ggplot2"
+      ],
+      "Imports": [
+        "methods",
+        "colorspace (>= 1.4)",
+        "gridExtra",
+        "cowplot",
+        "reshape2",
+        "pheatmap",
+        "grDevices",
+        "ggrepel",
+        "ggridges",
+        "stats",
+        "utils",
+        "SummarizedExperiment",
+        "SingleCellExperiment",
+        "S4Vectors"
+      ],
+      "Suggests": [
+        "plotly",
+        "testthat",
+        "Seurat (>= 2.2)",
+        "DESeq2",
+        "edgeR",
+        "ggplot.multistats",
+        "knitr",
+        "rmarkdown",
+        "BiocStyle",
+        "scRNAseq",
+        "ggrastr (>= 0.2.0)",
+        "ComplexHeatmap",
+        "bluster",
+        "scater",
+        "scran"
+      ],
+      "biocViews": "Software, Visualization, RNASeq, SingleCell, GeneExpression, Transcriptomics, DataImport",
+      "VignetteBuilder": "knitr",
+      "git_url": "https://git.bioconductor.org/packages/dittoSeq",
+      "git_branch": "RELEASE_3_21",
+      "git_last_commit": "6baca1c",
+      "git_last_commit_date": "2025-04-15",
+      "Repository": "Bioconductor 3.21",
+      "NeedsCompilation": "no",
+      "Author": "Daniel Bunis [aut, cre], Jared Andrews [aut, ctb]",
+      "Maintainer": "Daniel Bunis <daniel.bunis@ucsf.edu>"
     },
     "dotCall64": {
       "Package": "dotCall64",
@@ -4864,6 +5016,36 @@
       "Author": "Peter Solymos [aut, cre] (ORCID: <https://orcid.org/0000-0001-7337-1740>), Zygmunt Zawadzki [aut], Henrik Bengtsson [ctb], R Core Team [cph, ctb]",
       "Repository": "CRAN"
     },
+    "pheatmap": {
+      "Package": "pheatmap",
+      "Version": "1.0.13",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Pretty Heatmaps",
+      "Date": "2025-06-05",
+      "Authors@R": "person(given = \"Raivo\", family = \"Kolde\", role = c(\"aut\", \"cre\"), email = \"rkolde@gmail.com\")",
+      "Depends": [
+        "R (>= 2.0)"
+      ],
+      "Description": "Implementation of heatmaps that offers more control over dimensions and appearance.",
+      "Imports": [
+        "grid",
+        "RColorBrewer",
+        "scales",
+        "gtable",
+        "stats",
+        "grDevices",
+        "graphics"
+      ],
+      "License": "GPL-2",
+      "Encoding": "UTF-8",
+      "LazyLoad": "yes",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Raivo Kolde [aut, cre]",
+      "Maintainer": "Raivo Kolde <rkolde@gmail.com>",
+      "Repository": "CRAN"
+    },
     "pillar": {
       "Package": "pillar",
       "Version": "1.11.0",
@@ -5920,6 +6102,54 @@
       "Author": "Joe Cheng [aut], Timothy Mastny [aut], Richard Iannone [aut] (<https://orcid.org/0000-0003-3925-190X>), Barret Schloerke [aut] (<https://orcid.org/0000-0001-9986-114X>), Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>), Christophe Dervieux [ctb] (<https://orcid.org/0000-0003-4474-2498>), RStudio [cph, fnd], Sass Open Source Foundation [ctb, cph] (LibSass library), Greter Marcel [ctb, cph] (LibSass library), Mifsud Michael [ctb, cph] (LibSass library), Hampton Catlin [ctb, cph] (LibSass library), Natalie Weizenbaum [ctb, cph] (LibSass library), Chris Eppstein [ctb, cph] (LibSass library), Adams Joseph [ctb, cph] (json.cpp), Trifunovic Nemanja [ctb, cph] (utf8.h)",
       "Maintainer": "Carson Sievert <carson@rstudio.com>",
       "Repository": "CRAN"
+    },
+    "scGate": {
+      "Package": "scGate",
+      "Version": "1.7.2",
+      "Source": "GitHub",
+      "Type": "Package",
+      "Title": "Marker-Based Cell Type Purification for Single-Cell Sequencing Data",
+      "Authors@R": "c( person('Massimo', 'Andreatta', email = 'massimo.andreatta@unige.ch', role = c('aut','cre'), comment = c(ORCID = '0000-0002-8036-2647')),  person('Ariel','Berenstein', email = 'arieljberenstein@gmail.com', role = c('aut'), comment = c(ORCID = '0000-0001-8540-5389')),  person('Josep','Garnica', email = 'josep.garnicacaparros@unige.ch', role = c('aut')),   person('Santiago', 'Carmona', email = 'santiago.carmona@unige.ch', role = c('aut'), comment = c(ORCID = '0000-0002-2495-0671'))  )",
+      "Description": "A common bioinformatics task in single-cell data analysis is to purify a cell type or cell population of interest from heterogeneous datasets. 'scGate' automatizes marker-based purification of specific cell populations, without requiring training data or reference gene expression profiles. Briefly, 'scGate' takes as input: i) a gene expression matrix stored in a 'Seurat' object and ii) a “gating model” (GM), consisting of a set of marker genes that define the cell population of interest. The GM can be as simple as a single marker gene, or a combination of positive and negative markers. More complex GMs can be constructed in a hierarchical fashion, akin to gating strategies employed in flow cytometry. 'scGate' evaluates the strength of signature marker expression in each cell using the rank-based method 'UCell', and then performs k-nearest neighbor (kNN) smoothing by calculating the mean 'UCell' score across neighboring cells. kNN-smoothing aims at compensating for the large degree of sparsity in scRNA-seq data. Finally, a universal threshold over kNN-smoothed signature scores is applied in binary decision trees generated from the user-provided gating model, to annotate cells as either “pure” or “impure”, with respect to the cell population of interest. See the related publication Andreatta et al. (2022) <doi:10.1093/bioinformatics/btac141>.",
+      "biocViews": "",
+      "Depends": [
+        "R (>= 4.3.0)"
+      ],
+      "Imports": [
+        "Seurat (>= 4.0.0)",
+        "UCell (>= 2.6.0)",
+        "dplyr",
+        "stats",
+        "utils",
+        "methods",
+        "patchwork",
+        "ggridges",
+        "colorspace",
+        "reshape2",
+        "ggplot2",
+        "BiocParallel"
+      ],
+      "Suggests": [
+        "ggparty",
+        "partykit",
+        "knitr",
+        "rmarkdown"
+      ],
+      "VignetteBuilder": "knitr",
+      "URL": "https://github.com/carmonalab/scGate",
+      "BugReports": "https://github.com/carmonalab/scGate/issues",
+      "License": "GPL-3",
+      "Encoding": "UTF-8",
+      "LazyData": "true",
+      "RoxygenNote": "7.3.2",
+      "Author": "Massimo Andreatta [aut, cre] (ORCID: <https://orcid.org/0000-0002-8036-2647>), Ariel Berenstein [aut] (ORCID: <https://orcid.org/0000-0001-8540-5389>), Josep Garnica [aut], Santiago Carmona [aut] (ORCID: <https://orcid.org/0000-0002-2495-0671>)",
+      "Maintainer": "Massimo Andreatta <massimo.andreatta@unige.ch>",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "carmonalab",
+      "RemoteRepo": "scGATE",
+      "RemoteRef": "master",
+      "RemoteSha": "4b7fdc766d897f462dd03286d4c561ac96caee80"
     },
     "scales": {
       "Package": "scales",

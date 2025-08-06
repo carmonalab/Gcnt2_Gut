@@ -7,9 +7,13 @@ author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 
 ```{r downloading_processed_dataset}
 ds_name <- "SalasA_2023_GSE214695"
+home.path <- file.path(getwd(), ds_name)
+output_data_path <- file.path(home.path, "output")
+
+size <- "whole" # "light" or "whole"
 
 # cmc stands for colonic mucosa cells
-cmc <- readRDS(file.path(ds_name, "output/SalasA_2023_GSE214695_whole.rds"))
+cmc <- readRDS(file.path(output_data_path, paste0(ds_name, sprintf("_%s.rds", size))))
 ```
 
 # Finding Variable Genes
@@ -40,6 +44,11 @@ and/or "percent.rb"
 ```{r scale_data}
 cmc <- Seurat::ScaleData(cmc, vars.to.regress = c("percent.mito", "percent.ribo"))
 ```
+
+```{r saving_scaled}
+saveRDS(cmc, file.path(output_data_path,paste0(ds_name,sprintf("_scaled_%s.rds", size))))
+```
+
 
 # Principal Component Analysis (PCA)
 
@@ -107,6 +116,10 @@ cmc <- Seurat::FindNeighbors(cmc, dims = 1:15)
 cmc <- Seurat::FindClusters(cmc, resolution = c(0.3, 0.6, 0.8), algorithm = 4, random.seed = 42)
 ```
 
+```{r saving_clustered}
+saveRDS(cmc, file.path(output_data_path,paste0(ds_name,sprintf("_clustered_%s.rds", size))))
+```
+
 UMAP for resolution equal to 0.8.
 
 ```{r umap_res_1}
@@ -137,9 +150,8 @@ For downstream analyses, we choose the resolution of 0.3.
 
 ```{r res}
 res <- 0.3
-Seurat::Idents(cmc) <- sprintf("RNA_snn_res.%.1f", 0.3)
+Seurat::Idents(cmc) <- sprintf("RNA_snn_res.%.1f", res)
 ```
-
 
 # Differentially Expressed Genes
 
@@ -148,9 +160,9 @@ Seurat::Idents(cmc) <- sprintf("RNA_snn_res.%.1f", 0.3)
 Below, we seek to find the positive differentially expressed genes for a given cluster. The top positive differentially expressed genes per cluster will enable the cluster annotation.
 
 ```{r find_DE}
-for (i in 1:length(unique(Seurat::Idents(cmc)))){
-  cluster.markers <- sprintf("cluster%.0f.markers", i)
-  assign(cluster.markers, Seurat::FindMarkers(cmc, ident.1 = i, test.use = "wilcox", 
+for (i in unique(Seurat::Idents(cmc))){
+  cluster.markers <- sprintf("cluster%.0f.markers", as.integer(i))
+  assign(cluster.markers, Seurat::FindMarkers(cmc, ident.1 = as.integer(i), test.use = "wilcox", 
                                          only.pos = TRUE))
 }
 ```
@@ -158,8 +170,9 @@ for (i in 1:length(unique(Seurat::Idents(cmc)))){
 The cell below displays the positive differentially expressed genes per cluster.
 
 ```{r display_DE}
-for (i in 1:length(unique(Seurat::Idents(cmc)))){
-  print(get(sprintf("cluster%.0f.markers", i)))
+for (i in unique(Seurat::Idents(cmc))){
+  cat("Cluster", i, "\n")
+  print(get(sprintf("cluster%.0f.markers", as.integer(i))))
 }
 ```
 
@@ -169,13 +182,17 @@ Now, we find the positive differentially expressed genes for all clusters.
 cmc.markers <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", only.pos = TRUE)
 ```
 
+```{r saving_DE}
+saveRDS(cmc, file.path(output_data_path,paste0(ds_name,sprintf("_de_%s.rds", size))))
+```
+
 ## Visualizing Top Differentially Expressed Genes across Clusters
 
 Let us first create violin plots for the top 4 positive differentially expressed genes per cluster. The violin plots will then illustrate how these genes vary across clusters. 
 
 ```{r violin_plots_DE}
-for (i in 1:length(unique(Seurat::Idents(cmc)))){
-  cluster_of_interest <- get(sprintf("cluster%.0f.markers", i))
+for (i in unique(Seurat::Idents(cmc))){
+  cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
   top_4_DE_genes <- rownames(head(cluster_of_interest, 4))
   plots <- lapply(top_4_DE_genes, function(gene) {
   Seurat::VlnPlot(cmc, features = gene) + xlab("Clusters") + Seurat::NoLegend()
@@ -191,8 +208,8 @@ Next, we display feature plots for each cluster's top positive differentially ex
 ```{r summary_feature_plot_DE, fig.height=16, fig.width=9}
 top_DE_genes <- c()
 
-for (i in 1:length(unique(Seurat::Idents(cmc)))){
-  cluster_of_interest <- get(sprintf("cluster%.0f.markers", i))
+for (i in unique(Seurat::Idents(cmc))){
+  cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
   top_1_DE_gene <- rownames(head(cluster_of_interest, 1))
   top_DE_genes <- c(top_DE_genes, top_1_DE_gene)
 }
@@ -205,9 +222,9 @@ print(combined)
 ```
 
 ```{r feature_plots}
-for (i in 1:length(unique(Seurat::Idents(cmc)))){
-  cluster_of_interest <- get(sprintf("cluster%.0f.markers", i))
-  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[i]]) + ggtitle(paste(top_DE_genes[[i]], sprintf("Cluster %.0f", i), sep = " ")))
+for (i in unique(Seurat::Idents(cmc))){
+  cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
+  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[as.integer(i)]]) + ggtitle(paste(top_DE_genes[[as.integer(i)]], sprintf("Cluster %.0f", as.integer(i)), sep = " ")))
 }
 ```
 
@@ -266,14 +283,18 @@ cured_cmc$cluster_14 <- NULL
 models.DB <- scGate::get_scGateDB()
 models.list <- models.DB$human
 gating_model <- models.list$HiTME
-cured_cmc <- scGate::scGate(cured_cmc, model = gating_model, ncores = 3)
+cured_cmc <- scGate::scGate(cured_cmc, model = gating_model, ncores = 1)
 table(cured_cmc$scGate_multi, useNA = "ifany")
+```
+
+```{r saving_gated}
+saveRDS(cured_cmc, file.path(output_data_path,paste0(ds_name,sprintf("_gated_%s.rds", size))))
 ```
 
 Let us quickly visualize the obtained scGate classification on our Umap.
 
 ```{r scGate_classification_plot}
-Seurat::FeaturePlot(cured_cmc, features = "scGate_multi")
+Seurat::DimPlot(cured_cmc, reduction = "umap", group.by = "scGate_multi", label = TRUE, repel = TRUE)
 ```
 
 Now, we create a stacked barplot to analyze which cell types, obtained from the scGate classification, the clusters map to.
@@ -283,6 +304,35 @@ dittoSeq::dittoBarPlot(
     object = cured_cmc,
     var = "RNA_snn_res.0.3",
     group.by = "scGate_multi")
+
+dittoSeq::dittoBarPlot(
+    object = cured_cmc,
+    var = "scGate_multi",
+    group.by = "RNA_snn_res.0.3")
+
+Seurat::Idents(cured_cmc) <- sprintf("RNA_snn_res.%.1f", res)
+clusters <- unique(Seurat::Idents(cured_cmc))
+
+frequency_list <- list()
+
+for (cluster in clusters){
+  cluster_subset <- subset(cured_cmc, idents = cluster)
+  cell_counts <- table(cluster_subset$scGate_multi)
+  cell_percentages <- (cell_counts * 100) / sum(cell_counts)
+  frequency_list[[as.character(cluster)]] <- cell_percentages
+}
+
+gating_df <- do.call(rbind, lapply(frequency_list, function(x) {
+  all_types <- unique(unlist(lapply(frequency_list, names)))
+  filled <- setNames(rep(0, length(all_types)), all_types)
+  filled[names(x)] <- x
+  return(filled)
+}))
+
+gating_df <- as.data.frame(gating_df)
+rownames(gating_df) <- names(frequency_list)
+
+print(gating_df)
 ```
 
 
