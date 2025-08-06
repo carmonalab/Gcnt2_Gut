@@ -238,9 +238,11 @@ for (i in unique(Seurat::Idents(cmc))){
 Finally, we display an expression heatmap for the top 10 markers for each cluster.
 
 ```{r heatmap_DE}
+library(dplyr)
+
 cmc.markers %>%
   group_by(cluster) %>%
-  dplyr::filter(avg_log2FC > 1) %>%
+  filter(avg_log2FC > 1) %>%
   arrange(p_val_adj) %>%
   slice_head(n = 10) %>%
   ungroup() -> top10
@@ -289,7 +291,7 @@ cured_cmc$cluster_14 <- NULL
 models.DB <- scGate::get_scGateDB()
 models.list <- models.DB$human
 gating_model <- models.list$HiTME
-cured_cmc <- scGate::scGate(cured_cmc, model = gating_model, ncores = 1)
+cured_cmc <- scGate::scGate(cured_cmc, model = gating_model, ncores = 1, seed = 42)
 table(cured_cmc$scGate_multi, useNA = "ifany")
 ```
 
@@ -316,29 +318,23 @@ dittoSeq::dittoBarPlot(
     var = "scGate_multi",
     group.by = "RNA_snn_res.0.3")
 
-Seurat::Idents(cured_cmc) <- sprintf("RNA_snn_res.%.1f", res)
-clusters <- unique(Seurat::Idents(cured_cmc))
+frequency.mat <- table(Seurat::Idents(cured_cmc), cured_cmc$scGate_multi)
+frequency.mat <- apply(frequency.df, 1, function(x) {
+  x*100/sum(x)
+})
+frequency.mat <- t(frequency.mat)
+frequency.df <- as.data.frame.matrix(frequency.mat)
+print(frequency.df)
 
-frequency_list <- list()
+frequency.melted <- reshape2::melt(frequency.mat, varnames = c("Cluster", "CellType"), value.name = "Percentage")
+frequency.melted$Cluster <- factor(frequency.melted$Cluster,
+                                   levels = unique(frequency.melted$Cluster))
 
-for (cluster in clusters){
-  cluster_subset <- subset(cured_cmc, idents = cluster)
-  cell_counts <- table(cluster_subset$scGate_multi)
-  cell_percentages <- (cell_counts * 100) / sum(cell_counts)
-  frequency_list[[as.character(cluster)]] <- cell_percentages
-}
-
-gating_df <- do.call(rbind, lapply(frequency_list, function(x) {
-  all_types <- unique(unlist(lapply(frequency_list, names)))
-  filled <- setNames(rep(0, length(all_types)), all_types)
-  filled[names(x)] <- x
-  return(filled)
-}))
-
-gating_df <- as.data.frame(gating_df)
-rownames(gating_df) <- names(frequency_list)
-
-print(gating_df)
+ggplot2::ggplot(frequency.melted, ggplot2::aes(x = Cluster, y = CellType, fill = Percentage)) +
+  ggplot2::geom_tile() +
+  ggplot2::labs(title = "Heatmap of Cell Type per Cluster",
+                x = "Cluster",
+                y = "Cell Type")
 ```
 
 
