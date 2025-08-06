@@ -38,8 +38,8 @@ plot_1
 This step scales gene expression, to a normal distributions, across cells such that downstream 
 analyses are not biased by highly-expressed genes.
 
-Let us also play around with the "vars.to.regress" parameter. We can decide to include "percent.mt"
-and/or "percent.rb"
+Let us also play around with the "vars.to.regress" parameter. We can decide to include "percent.mito"
+and/or "percent.ribo"
 
 ```{r scale_data}
 cmc <- Seurat::ScaleData(cmc, vars.to.regress = c("percent.mito", "percent.ribo"))
@@ -163,7 +163,8 @@ Below, we seek to find the positive differentially expressed genes for a given c
 for (i in unique(Seurat::Idents(cmc))){
   cluster.markers <- sprintf("cluster%.0f.markers", as.integer(i))
   assign(cluster.markers, Seurat::FindMarkers(cmc, ident.1 = as.integer(i), test.use = "wilcox", 
-                                         only.pos = TRUE))
+                                              only.pos = TRUE, max.cells.per.ident = Inf,
+                                              random.seed = 42))
 }
 ```
 
@@ -171,15 +172,20 @@ The cell below displays the positive differentially expressed genes per cluster.
 
 ```{r display_DE}
 for (i in unique(Seurat::Idents(cmc))){
-  cat("Cluster", i, "\n")
-  print(get(sprintf("cluster%.0f.markers", as.integer(i))))
+  title <- paste("Cluster", i)
+  df <- get(sprintf("cluster%d.markers", as.integer(i)))
+  fake_row <- setNames(as.data.frame(matrix(rep(title, ncol(df)), nrow=1)), colnames(df))
+  df_with_title <- rbind(fake_row, df)
+  rownames(df_with_title)[1] <- title
+  print(df_with_title)
 }
 ```
 
 Now, we find the positive differentially expressed genes for all clusters.
 
 ```{r find_all_markers}
-cmc.markers <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", only.pos = TRUE)
+cmc.markers <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", only.pos = TRUE,
+                                      max.cells.per.ident = Inf, random.seed = 42)
 ```
 
 ```{r saving_DE}
@@ -195,7 +201,7 @@ for (i in unique(Seurat::Idents(cmc))){
   cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
   top_4_DE_genes <- rownames(head(cluster_of_interest, 4))
   plots <- lapply(top_4_DE_genes, function(gene) {
-  Seurat::VlnPlot(cmc, features = gene) + xlab("Clusters") + Seurat::NoLegend()
+  Seurat::VlnPlot(cmc, features = gene) + ggplot2::xlab("Clusters") + Seurat::NoLegend()
 })
   combined <- patchwork::wrap_plots(plots, ncol = 2)
   print(combined)
@@ -211,7 +217,7 @@ top_DE_genes <- c()
 for (i in unique(Seurat::Idents(cmc))){
   cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
   top_1_DE_gene <- rownames(head(cluster_of_interest, 1))
-  top_DE_genes <- c(top_DE_genes, top_1_DE_gene)
+  top_DE_genes[[as.integer(i)]] <- top_1_DE_gene
 }
 
 plots <- lapply(top_DE_genes, function(gene){
@@ -224,7 +230,7 @@ print(combined)
 ```{r feature_plots}
 for (i in unique(Seurat::Idents(cmc))){
   cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
-  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[as.integer(i)]]) + ggtitle(paste(top_DE_genes[[as.integer(i)]], sprintf("Cluster %.0f", as.integer(i)), sep = " ")))
+  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[as.integer(i)]]) + ggplot2::ggtitle(paste(top_DE_genes[[as.integer(i)]], sprintf("Cluster %.0f", as.integer(i)), sep = " ")))
 }
 ```
 
