@@ -3,7 +3,7 @@ title: "Comparison of Processing Output with the Author's"
 author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 ---
 
-# Downloading Processed Data
+# Downloading Processed Dataset
 
 ```{r downloading_processed_dataset}
 ds_name <- "SalasA_2023_GSE214695"
