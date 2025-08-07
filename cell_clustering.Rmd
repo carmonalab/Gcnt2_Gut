@@ -337,4 +337,24 @@ ggplot2::ggplot(frequency.melted, ggplot2::aes(x = Cluster, y = CellType, fill =
                 y = "Cell Type")
 ```
 
+## Manual Annotation
 
+Manually, we label each cluster with the cell type that is most represented within the cluster. The most represented cell type for each cluster can be found in the table, barplot, and heatmap above.
+
+```{r manual_annotation}
+cured_cmc$manual_annotation <- NA
+
+for (i in unique(Seurat::Idents(cured_cmc))) {
+  cluster_row <- frequency.df[as.character(i), ]
+  cell_type <- names(which.max(cluster_row))
+
+  cluster_cells <- Seurat::WhichCells(cured_cmc, idents = i)
+  cured_cmc$manual_annotation[cluster_cells] <- cell_type
+}
+```
+
+Finally, let us save our final Seurat object that has been scGated and manually annotated.
+
+```{r saving_annotated}
+saveRDS(cured_cmc, file.path(output_data_path,paste0(ds_name,sprintf("_annotated_%s.rds", size))))
+```
