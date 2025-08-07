@@ -15,3 +15,50 @@ size <- "whole" # "light" or "whole"
 # cmc stands for colonic mucosa cells
 cmc <- readRDS(file.path(output_data_path, paste0(ds_name, sprintf("_annotated_%s.rds", size))))
 ```
+
+# Classification
+
+## Classification Function
+
+```{r classifying_fucntion}
+source("Rutils/functions.R")
+```
+
+## Classification of CD4 T and CD8 T cells
+
+```{r seurat_objects_creation}
+ref_cd4 <- ProjecTILs::get.reference.maps(collection = "human", 
+                                          reference = "CD4")[["human"]][["CD4"]]
+ref_cd8 <- ProjecTILs::get.reference.maps(collection = "human", 
+                                          reference = "CD8")[["human"]][["CD8"]]
+
+cd4_cells <- cell_type_classification(cmc, cell_type = "CD4T", ref_map = ref_cd4)
+cd8_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8)
+```
+
+## Visualization 
+
+Let us first visualize the new ProjecTILs 
+
+```{r umap_visualization}
+Seurat::DimPlot(cd4_cells, reduction = "umap", group.by = "functional.cluster", 
+                label = FALSE) + ggplot2::ggtitle("CD4 T Cells")
+Seurat::DimPlot(cd8_cells, reduction = "umap", group.by = "functional.cluster", 
+                label = FALSE) + ggplot2::ggtitle("CD8 T Cells")
+```
+
+In addition, let us see how many cells there are per subtype.
+
+```{r cell_subtype_counts}
+cd4_table <- table(cd4_cells$functional.cluster)
+knitr::kable(cd4_table, col.names = c("Cell Type", "Counts"))
+
+cd8_table <- table(cd8_cells$functional.cluster)
+knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"))
+```
+
+## Saving projected objects
+
+
+
+

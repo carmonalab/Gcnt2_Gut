@@ -254,3 +254,20 @@ write_dgCMatrix_h5 <- function(mat,
                  paste0("/",ref_name,"/indptr"))
   
 }
+
+
+cell_type_classification <- function(object, cell_type, ref_map){
+  
+  # Assuming that your Seurat object was scGated  
+  Seurat::Idents(object) <- object$scGate_multi
+  
+  # Subsetting only relevant cell type
+  cells_of_interest <- subset(object, idents = cell_type)
+  
+  # ProjecTILs classification using passed reference map
+  data("Hs2Mm.convert.table", package = "ProjecTILs")
+  cells_of_interest <- ProjecTILs::ProjecTILs.classifier(query = cells_of_interest, 
+                                                         ref = ref_map, filter.cells	= FALSE)
+  
+  return(cells_of_interest)
+}
