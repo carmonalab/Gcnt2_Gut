@@ -57,7 +57,13 @@ cd8_table <- table(cd8_cells$functional.cluster)
 knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"))
 ```
 
-## Saving projected objects
+## Saving Classification Output
+
+```{r saving_classification_output}
+saveRDS(cd4_cells, file.path(output_data_path,paste0(ds_name,sprintf("_cd4_cells_%s.rds", size))))
+saveRDS(cd8_cells, file.path(output_data_path,paste0(ds_name,sprintf("_cd8_cells_%s.rds", size))))
+```
+
 
 
 
