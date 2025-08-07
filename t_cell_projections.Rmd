@@ -64,7 +64,24 @@ saveRDS(cd4_cells, file.path(output_data_path,paste0(ds_name,sprintf("_cd4_cells
 saveRDS(cd8_cells, file.path(output_data_path,paste0(ds_name,sprintf("_cd8_cells_%s.rds", size))))
 ```
 
+# Updating Initial Seurat Object
 
+## Adding New Metadata Column
 
+```{r adding_meta_column}
+cd4_meta <- cd4_cells@meta.data[, "functional.cluster", drop = FALSE]
+cd8_meta <- cd8_cells@meta.data[, "functional.cluster", drop = FALSE]
+
+cmc$functional.cluster <- cmc$scGate_multi 
+
+cmc@meta.data[rownames(cd4_meta), "functional.cluster"] <- cd4_meta
+cmc@meta.data[rownames(cd8_meta), "functional.cluster"] <- cd8_meta
+```
+
+## Saving Updated Seurat Objet
+
+```{r saving_updated_object}
+saveRDS(cmc, file.path(output_data_path,paste0(ds_name,sprintf("_finely_annotated_%s.rds", size))))
+```
 
 
