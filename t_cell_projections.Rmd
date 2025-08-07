@@ -18,22 +18,25 @@ cmc <- readRDS(file.path(output_data_path, paste0(ds_name, sprintf("_annotated_%
 
 # Classification
 
-## Classification Function
-
-```{r classifying_fucntion}
-source("Rutils/functions.R")
-```
-
 ## Classification of CD4 T and CD8 T cells
 
 ```{r seurat_objects_creation}
+# Loading functions
+source("Rutils/functions.R")
+
 ref_cd4 <- ProjecTILs::get.reference.maps(collection = "human", 
                                           reference = "CD4")[["human"]][["CD4"]]
 ref_cd8 <- ProjecTILs::get.reference.maps(collection = "human", 
                                           reference = "CD8")[["human"]][["CD8"]]
 
-cd4_cells <- cell_type_classification(cmc, cell_type = "CD4T", ref_map = ref_cd4)
-cd8_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8)
+cd4_gated_cells <- cell_type_classification(cmc, cell_type = "CD4T", ref_map = ref_cd4)
+cd4_manual_cells <- cell_type_classification(cmc, cell_type = "CD4T", ref_map = ref_cd4,
+                                             ident_col = manual_annotation,
+                                             filter.cells = TRUE)
+cd8_gated_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8)
+cd8_manual_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8,
+                                             ident_col = manual_annotation,
+                                             filter.cells = TRUE)
 ```
 
 ## Visualization 
@@ -41,41 +44,70 @@ cd8_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8
 Let us first visualize the new ProjecTILs 
 
 ```{r umap_visualization}
-Seurat::DimPlot(cd4_cells, reduction = "umap", group.by = "functional.cluster", 
-                label = FALSE) + ggplot2::ggtitle("CD4 T Cells")
-Seurat::DimPlot(cd8_cells, reduction = "umap", group.by = "functional.cluster", 
-                label = FALSE) + ggplot2::ggtitle("CD8 T Cells")
+Seurat::DimPlot(cd4_gated_cells, reduction = "umap", group.by = "functional.cluster", 
+                label = FALSE) + ggplot2::ggtitle("Gated CD4 T Cells")
+
+Seurat::DimPlot(cd4_manual_cells, reduction = "umap", group.by = "functional.cluster", 
+                label = FALSE) + ggplot2::ggtitle("Manual CD4 T Cells")
+
+Seurat::DimPlot(cd8_gated_cells, reduction = "umap", group.by = "functional.cluster", 
+                label = FALSE) + ggplot2::ggtitle("Gated CD8 T Cells")
+
+Seurat::DimPlot(cd8_manual_cells, reduction = "umap", group.by = "functional.cluster", 
+                label = FALSE) + ggplot2::ggtitle("Manual CD8 T Cells")
 ```
 
 In addition, let us see how many cells there are per subtype.
 
 ```{r cell_subtype_counts}
-cd4_table <- table(cd4_cells$functional.cluster)
-knitr::kable(cd4_table, col.names = c("Cell Type", "Counts"))
+cd4_gated_table <- table(cd4_gated_cells$functional.cluster)
+knitr::kable(cd4_table, col.names = c("Cell Type", "Counts"), caption = "Gated CD4 T Cells")
 
-cd8_table <- table(cd8_cells$functional.cluster)
-knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"))
+cd4_manual_table <- table(cd4_manual_cells$functional.cluster)
+knitr::kable(cd4_table, col.names = c("Cell Type", "Counts"), caption = "Manual CD4 T Cells")
+
+cd8_gated_table <- table(cd8_gated_cells$functional.cluster)
+knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"), caption = "Gated CD8 T Cells")
+
+cd8_manual_table <- table(cd8_manual_cells$functional.cluster)
+knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"), caption = "Manual CD8 T Cells")
 ```
 
 ## Saving Classification Output
 
 ```{r saving_classification_output}
-saveRDS(cd4_cells, file.path(output_data_path,paste0(ds_name,sprintf("_cd4_cells_%s.rds", size))))
-saveRDS(cd8_cells, file.path(output_data_path,paste0(ds_name,sprintf("_cd8_cells_%s.rds", size))))
+saveRDS(cd4_gated_cells, 
+        file.path(output_data_path,paste0(ds_name,sprintf("_cd4_gated_%s.rds", size))))
+saveRDS(cd4_manual_cells, 
+        file.path(output_data_path,paste0(ds_name,sprintf("_cd4_manual_%s.rds", size))))
+saveRDS(cd8_gated_cells, 
+        file.path(output_data_path,paste0(ds_name,sprintf("_cd8_gated_%s.rds", size))))
+saveRDS(cd8_manual_cells, 
+        file.path(output_data_path,paste0(ds_name,sprintf("_cd8_manual_%s.rds", size))))
 ```
 
 # Updating Initial Seurat Object
 
-## Adding New Metadata Column
+## Adding New Metadata Columns
 
-```{r adding_meta_column}
-cd4_meta <- cd4_cells@meta.data[, "functional.cluster", drop = FALSE]
-cd8_meta <- cd8_cells@meta.data[, "functional.cluster", drop = FALSE]
+```{r adding_meta_columns}
+cd4_meta <- cd4_gated_cells@meta.data[, "functional.cluster", drop = FALSE]
+cd8_meta <- cd8_gated_cells@meta.data[, "functional.cluster", drop = FALSE]
 
-cmc$functional.cluster <- cmc$scGate_multi 
+cmc$fine.annotation.gated <- cmc$scGate_multi 
 
-cmc@meta.data[rownames(cd4_meta), "functional.cluster"] <- cd4_meta
-cmc@meta.data[rownames(cd8_meta), "functional.cluster"] <- cd8_meta
+cmc@meta.data[rownames(cd4_meta), "fine.annotation.gated"] <- cd4_meta
+cmc@meta.data[rownames(cd8_meta), "fine.annotation.gated"] <- cd8_meta
+
+#-------------------
+cd4_meta <- cd4_manual_cells@meta.data[, "functional.cluster", drop = FALSE]
+cd8_meta <- cd8_manual_cells@meta.data[, "functional.cluster", drop = FALSE]
+
+cmc$fine.annotation.manual <- cmc$manual_annotation 
+
+cmc@meta.data[rownames(cd4_meta), "fine.annotation.manual"] <- cd4_meta
+cmc@meta.data[rownames(cd8_meta), "fine.annotation.manual"] <- cd8_meta
+
 ```
 
 ## Saving Updated Seurat Objet
