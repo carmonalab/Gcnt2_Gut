@@ -14,6 +14,7 @@ renv/
 .RData
 .Ruserdata
 .Renviron 
+.RDataTmp
 
 # Knitted files from Rmarkdown 
 scRNAseq_data_processing_template.html
@@ -22,6 +23,10 @@ data_processing_comparison_author.html
 data_processing_comparison_author.pdf
 cell_clustering.html
 cell_clustering.pdf
+t_cell_projections.html
+t_cell_projections.pdf
+gcnt2_expression.html
+gcnt2_expression.pdf
 
 # Space-consuming datasets and files  
 datasets/

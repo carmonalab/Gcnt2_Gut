@@ -1,5 +1,5 @@
 ---
-title: "Comparison of Processing Output with the Author's"
+title: "Fine Annotation of CD4 and CD8 T Cells using ProjecTILs"
 author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 ---
 
@@ -31,12 +31,12 @@ ref_cd8 <- ProjecTILs::get.reference.maps(collection = "human",
 
 cd4_gated_cells <- cell_type_classification(cmc, cell_type = "CD4T", ref_map = ref_cd4)
 cd4_manual_cells <- cell_type_classification(cmc, cell_type = "CD4T", ref_map = ref_cd4,
-                                             ident_col = manual_annotation,
-                                             filter.cells = TRUE)
+                                             ident_col = "manual_annotation",
+                                             filter.cells = FALSE)
 cd8_gated_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8)
 cd8_manual_cells <- cell_type_classification(cmc, cell_type = "CD8T", ref_map = ref_cd8,
-                                             ident_col = manual_annotation,
-                                             filter.cells = TRUE)
+                                             ident_col = "manual_annotation",
+                                             filter.cells = FALSE)
 ```
 
 ## Visualization 

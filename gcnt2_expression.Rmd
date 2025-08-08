@@ -1,0 +1,59 @@
+---
+title: "Analysis of GCNT2 Expression Profile"
+author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
+---
+
+# Downloading Finely Annotated Dataset
+
+```{r downloading_processed_dataset}
+ds_name <- "SalasA_2023_GSE214695"
+home.path <- file.path(getwd(), ds_name)
+output_data_path <- file.path(home.path, "output")
+
+size <- "whole" # "light" or "whole"
+
+# cmc stands for colonic mucosa cells
+cmc <- readRDS(file.path(output_data_path, paste0(ds_name, 
+                                                  sprintf("_finely_annotated_%s.rds", size))))
+```
+
+# Initial Analyses per Cell Type
+
+## Extracting GCNT2 Counts 
+
+```{r extracting_gcnt2}
+counts <- Seurat::GetAssayData(cmc, assay = "RNA", slot = "data")
+gcnt2_counts <- counts["GCNT2", ]
+cmc$GCNT2 <- gcnt2_counts
+```
+
+## ANOVA Test
+
+```{r anova_test}
+gcnt2.cell_type.expression <- cmc@meta.data[, c("manual_annotation", "GCNT2")]
+gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
+print(summary(gcnt2.aov.model))
+cat("-----------------------------------------","\n")
+print(TukeyHSD(gcnt2.aov.model))
+```
+
+## Initial Diagnostic Plots
+
+```{r in_diganostic_plots}
+Seurat::VlnPlot(cmc, "GCNT2", group.by = "manual_annotation")
+
+ggplot2::ggplot(gcnt2.cell_type.expression, 
+                ggplot2::aes(x = manual_annotation, y = GCNT2)) + 
+  ggplot2::geom_boxplot(fill="slateblue", alpha=0.2) + 
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("GCNT2 Expression") +
+  ggplot2::ggtitle("Boxplot of GCNT2 Expression across Cell Types Omitting ")
+
+```
+
+
+
+
+
+
+
