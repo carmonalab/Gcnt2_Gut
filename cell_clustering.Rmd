@@ -308,18 +308,20 @@ Seurat::DimPlot(cured_cmc, reduction = "umap", group.by = "scGate_multi", label 
 Now, we create a stacked barplot to analyze which cell types, obtained from the scGate classification, the clusters map to.
 
 ```{r classification_to_cluster}
+Seurat::Idents(cured_cmc) <- sprintf("RNA_snn_res.%.1f", res)
+
 dittoSeq::dittoBarPlot(
     object = cured_cmc,
-    var = "RNA_snn_res.0.3",
+    var = Seurat::Idents(cured_cmc),
     group.by = "scGate_multi")
 
 dittoSeq::dittoBarPlot(
     object = cured_cmc,
     var = "scGate_multi",
-    group.by = "RNA_snn_res.0.3")
+    group.by = Seurat::Idents(cured_cmc))
 
 frequency.mat <- table(Seurat::Idents(cured_cmc), cured_cmc$scGate_multi)
-frequency.mat <- apply(frequency.df, 1, function(x) {
+frequency.mat <- apply(frequency.mat, 1, function(x) {
   x*100/sum(x)
 })
 frequency.mat <- t(frequency.mat)
