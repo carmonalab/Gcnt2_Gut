@@ -1,5 +1,5 @@
 ---
-title: "Comparison of Processing Output with the Author's"
+title: "Cell Clustering and Classification"
 author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 ---
 
