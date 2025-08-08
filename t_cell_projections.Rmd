@@ -61,16 +61,16 @@ In addition, let us see how many cells there are per subtype.
 
 ```{r cell_subtype_counts}
 cd4_gated_table <- table(cd4_gated_cells$functional.cluster)
-knitr::kable(cd4_table, col.names = c("Cell Type", "Counts"), caption = "Gated CD4 T Cells")
+knitr::kable(cd4_gated_table, col.names = c("Cell Type", "Counts"), caption = "Gated CD4 T Cells")
 
 cd4_manual_table <- table(cd4_manual_cells$functional.cluster)
-knitr::kable(cd4_table, col.names = c("Cell Type", "Counts"), caption = "Manual CD4 T Cells")
+knitr::kable(cd4_manual_table, col.names = c("Cell Type", "Counts"), caption = "Manual CD4 T Cells")
 
 cd8_gated_table <- table(cd8_gated_cells$functional.cluster)
-knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"), caption = "Gated CD8 T Cells")
+knitr::kable(cd8_gated_table, col.names = c("Cell Type", "Counts"), caption = "Gated CD8 T Cells")
 
 cd8_manual_table <- table(cd8_manual_cells$functional.cluster)
-knitr::kable(cd8_table, col.names = c("Cell Type", "Counts"), caption = "Manual CD8 T Cells")
+knitr::kable(cd8_manual_table, col.names = c("Cell Type", "Counts"), caption = "Manual CD8 T Cells")
 ```
 
 ## Saving Classification Output
