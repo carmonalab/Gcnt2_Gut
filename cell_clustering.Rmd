@@ -24,7 +24,7 @@ We can vary the selection method: "vst", "mean.var.plot", and "dispersion". "mea
 not work and demands the empirical determination of two more parameters, namely "num.bin" and
 "binning.method".
 
-```{r find-var_genes}
+```{r find_var_genes}
 cmc <- Seurat::FindVariableFeatures(cmc, selection.method = "dispersion", nfeatures = 2000)
 
 top_5 <- head(SeuratObject::VariableFeatures(cmc), 5)
@@ -315,10 +315,11 @@ dittoSeq::dittoBarPlot(
     var = Seurat::Idents(cured_cmc),
     group.by = "scGate_multi")
 
-dittoSeq::dittoBarPlot(
+plot <- dittoSeq::dittoBarPlot(
     object = cured_cmc,
     var = "scGate_multi",
     group.by = Seurat::Idents(cured_cmc))
+plot + xlab("Clusters")
 
 frequency.mat <- table(Seurat::Idents(cured_cmc), cured_cmc$scGate_multi)
 frequency.mat <- apply(frequency.mat, 1, function(x) {
