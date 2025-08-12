@@ -278,11 +278,13 @@ cluster14.markers.logFC
 
 Moreover, when ordered by avg_log2FC, the top positive differentially expressed genes for cluster 14 do not point towards any plausible cell type found in the colonic mucosa. Hence, cluster 14 is probably filled with low quality cells that we will discard. That is, we will subset our Seurat object so that the cells of cluster 14 do not appear in downstream analyses.
 
-```{r}
+```{r deleting_cluster_14}
 cured_cmc <- subset(cmc, subset = cluster_14 != "Cluster 14")
 
 cmc$cluster_14 <- NULL
 cured_cmc$cluster_14 <- NULL
+
+cat("Number of cells left in Seurat object:", length(Seurat::Cells(cured_cmc)))
 ```
 
 ## scGate Classification
@@ -319,7 +321,7 @@ plot <- dittoSeq::dittoBarPlot(
     object = cured_cmc,
     var = "scGate_multi",
     group.by = Seurat::Idents(cured_cmc))
-plot + xlab("Clusters")
+plot + ggplot2::xlab("Clusters")
 
 frequency.mat <- table(Seurat::Idents(cured_cmc), cured_cmc$scGate_multi)
 frequency.mat <- apply(frequency.mat, 1, function(x) {
