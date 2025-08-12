@@ -1,0 +1,62 @@
+---
+title: "Batch Effects Verification"
+author: "A. Mihaylov <aleksandar.mihaylov@epfl.ch>"
+---
+
+# Downloading Finely Annotated Dataset
+
+```{r downloading_processed_dataset}
+ds_name <- "SalasA_2023_GSE214695"
+home.path <- file.path(getwd(), ds_name)
+output_data_path <- file.path(home.path, "output")
+
+size <- "whole" # "light" or "whole"
+
+# cmc stands for colonic mucosa cells
+cmc <- readRDS(file.path(output_data_path, paste0(ds_name, 
+                                                  sprintf("_finely_annotated_%s.rds", size))))
+```
+
+# Visual Verifications
+
+## Feature Plots
+
+To start with, let us construct a dimensional reduction plot with the three conditions we have: healthy, IBD, and Celiac disease. 
+
+```{r feature_plot_condition}
+cmc$Treatment <- factor(cmc$Treatment)
+Seurat::DimPlot(cmc, group.by = "Treatment") 
+```
+
+Now, we construct a dimensional reduction plot with the 18 patients.
+
+```{r feature_plot_individual}
+cmc$Sample <- factor(cmc$Sample)
+Seurat::DimPlot(cmc, group.by = "Sample") 
+```
+
+Overall, it seems like most cell have a bit of each condition and each individual. Next, we will turn to stacked barplots to check for batch effects more accurately.
+
+## Stacked Barplots
+
+We begin by generating a stacked barplot for the three distinct conditions.
+
+```{r stacked_barplot_condition}
+dittoSeq::dittoBarPlot(
+    object = cmc,
+    var = "Treatment",
+    group.by = "manual_annotation")
+```
+
+Then, we construct a stacked barplot with the 18 individuals of the study.
+
+```{r stacked_barplot_individual}
+dittoSeq::dittoBarPlot(
+    object = cmc,
+    var = "Sample",
+    group.by = "manual_annotation")
+```
+
+# Conclusion
+
+To conclude, given that each cell type contains all three conditions and all 18 patients, batch effects can be ignored in the previously completed clustering and annotating step. Thus, we move onto studying _GCNT2_'s expression profile without repeating the above-mentioned step.
