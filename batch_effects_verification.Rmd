@@ -21,7 +21,7 @@ cmc <- readRDS(file.path(output_data_path, paste0(ds_name,
 
 ## Feature Plots
 
-To start with, let us construct a dimensional reduction plot with the three conditions we have: healthy, IBD, and Celiac disease. 
+To start with, let us construct a dimensional reduction plot with the three conditions we have: healthy, Ulcerative Colitis, and Crohn's disease. 
 
 ```{r feature_plot_condition}
 cmc$Treatment <- factor(cmc$Treatment)
@@ -67,4 +67,4 @@ dittoSeq::dittoBarPlot(
 
 # Conclusion
 
-To conclude, given that each cell type contains all three conditions and all 18 patients, batch effects can be ignored in the previously completed clustering and annotating step. Thus, we move onto studying _GCNT2_'s expression profile without repeating the above-mentioned step.
+To conclude, given that each cell type contains all three conditions and all 18 patients, batch effects can be ignored in the previously completed clustering and annotating step. Thus, we move onto studying GCNT2's expression profile without repeating the above-mentioned step.
