@@ -35,13 +35,16 @@ cmc$Sample <- factor(cmc$Sample)
 Seurat::DimPlot(cmc, group.by = "Sample") 
 ```
 
-Overall, it seems like most cell have a bit of each condition and each individual. Next, we will turn to stacked barplots to check for batch effects more accurately.
-
 ## Stacked Barplots
 
 We begin by generating a stacked barplot for the three distinct conditions.
 
 ```{r stacked_barplot_condition}
+dittoSeq::dittoBarPlot(
+    object = cmc,
+    var = "Treatment",
+    group.by = "RNA_snn_res.0.3")
+
 dittoSeq::dittoBarPlot(
     object = cmc,
     var = "Treatment",
@@ -51,6 +54,11 @@ dittoSeq::dittoBarPlot(
 Then, we construct a stacked barplot with the 18 individuals of the study.
 
 ```{r stacked_barplot_individual}
+dittoSeq::dittoBarPlot(
+    object = cmc,
+    var = "Sample",
+    group.by = "RNA_snn_res.0.3")
+
 dittoSeq::dittoBarPlot(
     object = cmc,
     var = "Sample",
