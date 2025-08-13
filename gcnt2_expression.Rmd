@@ -8,6 +8,7 @@ author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 ## Downloading Finely Annotated Dataset
 
 ```{r downloading_processed_dataset}
+library(dplyr)
 ds_name <- "SalasA_2023_GSE214695"
 home.path <- file.path(getwd(), ds_name)
 output_data_path <- file.path(home.path, "output")
@@ -21,7 +22,7 @@ cmc <- readRDS(file.path(output_data_path, paste0(ds_name,
 
 ## Extracting GCNT2 Counts 
 
-```{r extracting_gcnt2}
+```{r extracting_counts}
 counts <- Seurat::GetAssayData(cmc, assay = "RNA", slot = "data")
 gcnt2_counts <- counts["GCNT2", ]
 cmc$GCNT2 <- gcnt2_counts
@@ -32,12 +33,41 @@ cmc$GCNT2 <- gcnt2_counts
 ## ANOVA Test
 
 ```{r anova_test}
-cat("All Cells Considered","\n", "\n")
+cat("\033[31mAll Cells Considered\033[0m\n")
+
+cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.cell_type.expression <- cmc@meta.data[, c("manual_annotation", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
 print(summary(gcnt2.aov.model))
 cat("-----------------------------------------","\n")
-print(TukeyHSD(gcnt2.aov.model))
+
+cat("\033[32mTukeyHSD\033[0m\n")
+gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
+print(gcnt2.tukey.results)
+
+cell_types <- unique(gcnt2.cell_type.expression$manual_annotation)
+groups <- combn(cell_types, 2, simplify = FALSE)
+gcnt2.wilcox.results <- purrr::map_dfr(groups, ~{
+  group1 <- .x[1]
+  group2 <- .x[2]
+  
+  data1 <- gcnt2.cell_type.expression %>%
+    dplyr::filter(manual_annotation == group1) %>%
+    dplyr::pull(GCNT2)
+  
+  data2 <- gcnt2.cell_type.expression %>%
+    dplyr::filter(manual_annotation == group2) %>%
+    dplyr::pull(GCNT2)
+  
+  test <- wilcox.test(data1, data2)
+  
+  tibble(
+    group1 = group1,
+    group2 = group2,
+    p.value = test$p.value
+  )
+})
+print(gcnt2.wilcox.results)
 ```
 
 ## Initial Diagnostic Plots
@@ -72,12 +102,21 @@ cat("Number of cells left in Seurat object:", length(Seurat::Cells(filtered_cmc)
 ## Statistical Tests
 
 ```{r stat_tests}
-cat("Only GCNT2 Expressing Cells Considered","\n", "\n")
+cat("\033[31mOnly GCNT2 Expressing Cells Considered\033[0m\n")
+
+cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.cell_type.expression <- filtered_cmc@meta.data[, c("manual_annotation", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
 print(summary(gcnt2.aov.model))
 cat("-----------------------------------------","\n")
-print(TukeyHSD(gcnt2.aov.model))
+
+cat("\033[32mTukey HSD\033[0m\n")
+gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
+print(gcnt2.tukey.results)
+cat("-----------------------------------------","\n")
+
+cat("\033[32mWilcoxon Test\033[0m\n")
+gcnt2.wilcox.results <- wilcox.test(gcnt2.cell_type.expression)
 ```
 
 ## Diagnostic Plots
@@ -94,7 +133,56 @@ ggplot2::ggplot(gcnt2.cell_type.expression,
   ggplot2::ggtitle("Boxplot of GCNT2 Expression across Cell Types Omitting GCNT2 Non-expressing Cells")
 
 Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "manual_annotation") +
-  ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Cell Types")
+  ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Cell Types Omitting GCNT2 Non-expressing Cells")
+```
+
+## Significance Plots
+
+```{r significance_plots}
+library(dplyr)
+
+ggplot2::ggplot(gcnt2.cell_type.expression, ggplot2::aes(x = manual_annotation, y = GCNT2)) +
+  ggplot2::geom_jitter(width = 0.05, size = 1) +
+  ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5, 
+                        fatten = 2, color = "magenta") +
+  ggpubr::stat_compare_means(
+    comparisons = list(combn(unique(gcnt2.cell_type.expression$manual_annotation), 2)),
+    method = "wilcox.test",
+    label = "p.signif") +
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("GCNT2 Expression") +
+  ggplot2::ggtitle("GCNT2 Expression vs. Cell Types Omitting GCNT2 Non-expressing Cells, Wilcoxon Test") +
+  ggplot2::theme_classic()
+
+gcnt2.tukey.results[[1]] %>% 
+  as.data.frame() %>% 
+  dplyr::rename(p_adj = `p adj`) %>% 
+  dplyr::filter(p_adj <= 1 - attr(gcnt2.tukey.results, "conf.level")) %>% 
+  tibble::rownames_to_column(var = "groups") %>% 
+  tidyr::separate(groups, into = c("group1", "group2"), sep = "-") %>% 
+  dplyr::mutate(y_pos = seq(from = 1.2 * max(gcnt2.cell_type.expression$GCNT2), 
+                            to = 1.2 * max(gcnt2.cell_type.expression$GCNT2) + 0.7*nrow(.),
+                            length.out = nrow(.))) %>%
+  dplyr::mutate(p.sig = case_when(
+    p_adj <= 0.0001 ~ "****",
+    p_adj <= 0.001 ~ "***",
+    p_adj <= 0.01 ~ "**",
+    TRUE ~ "*",
+  )) -> gcnt2.tukey.df
+
+ggplot2::ggplot(gcnt2.cell_type.expression, ggplot2::aes(x = manual_annotation, y = GCNT2)) +
+  ggplot2::geom_jitter(width = 0.05, size = 1) +
+  ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5, 
+                        fatten = 2, color = "magenta") +
+  ggpubr::stat_pvalue_manual(
+    data = gcnt2.tukey.df,
+    label = "p.sig",
+    y.position = "y_pos"
+  ) +
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("GCNT2 Expression") +
+  ggplot2::ggtitle("GCNT2 Expression vs. Cell Types Omitting GCNT2 Non-expressing Cells, Tukey Test")
+  ggplot2::theme_classic()
 ```
 
 # Analysis per Condition
@@ -102,21 +190,38 @@ Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "manual_annotatio
 ## Statistical Tests
 
 ```{r stat_tests}
-cat("All Cells Considered","\n", "\n")
+cat("\033[31mAll Cells Considered\033[0m\n")
+
+cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.condition.expression <- cmc@meta.data[, c("Treatment", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.condition.expression$GCNT2 ~ gcnt2.condition.expression$Treatment)
 print(summary(gcnt2.aov.model))
 cat("-----------------------------------------","\n")
-print(TukeyHSD(gcnt2.aov.model))
 
+cat("\033[32mTukey HSD\033[0m\n")
+gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
+print(gcnt2.tukey.results)
+cat("-----------------------------------------","\n")
+
+cat("\033[32mWilcoxon Test\033[0m\n")
+gcnt2.wilcox.results <- wilcox.test(gcnt2.condition.expression)
 cat("---------------------------------------------------------------------------------------------------","\n")
 
-cat("Only GCNT2 Expressing Cells Considered","\n", "\n")
+cat("\033[31mOnly GCNT2 Expressing Cells Considered\033[0m\n")
+
+cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.condition.expression <- filtered_cmc@meta.data[, c("Treatment", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.condition.expression$GCNT2 ~ gcnt2.condition.expression$Treatment)
 print(summary(gcnt2.aov.model))
 cat("-----------------------------------------","\n")
-print(TukeyHSD(gcnt2.aov.model))
+
+cat("\033[32mTukey HSD\033[0m\n")
+gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
+print(gcnt2.tukey.results)
+cat("-----------------------------------------","\n")
+
+cat("\033[32mWilcoxon Test\033[0m\n")
+gcnt2.wilcox.results <- wilcox.test(gcnt2.condition.expression)
 ```
 
 ## Diagnostic Plots
@@ -136,6 +241,53 @@ Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "Treatment") +
   ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Conditions Omitting GCNT2 Non-expressing Cells")
 ```
 
+## Significance Plots
 
+```{r significance_plots}
+library(dplyr)
+
+ggplot2::ggplot(gcnt2.cell_type.expression, ggplot2::aes(x = manual_annotation, y = GCNT2)) +
+  ggplot2::geom_jitter(width = 0.05, size = 1) +
+  ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5, 
+                        fatten = 2, color = "magenta") +
+  ggpubr::stat_compare_means(
+    comparisons = list(combn(unique(gcnt2.cell_type.expression$manual_annotation), 2)),
+    method = "wilcox.test",
+    label = "p.signif") +
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("GCNT2 Expression") +
+  ggplot2::ggtitle("GCNT2 Expression vs. Cell Types Omitting GCNT2 Non-expressing Cells, Wilcoxon Test") +
+  ggplot2::theme_classic()
+
+gcnt2.tukey.results[[1]] %>% 
+  as.data.frame() %>% 
+  dplyr::rename(p_adj = `p adj`) %>% 
+  dplyr::filter(p_adj <= 1 - attr(gcnt2.tukey.results, "conf.level")) %>% 
+  tibble::rownames_to_column(var = "groups") %>% 
+  tidyr::separate(groups, into = c("group1", "group2"), sep = "-") %>% 
+  dplyr::mutate(y_pos = seq(from = 1.2 * max(gcnt2.cell_type.expression$GCNT2), 
+                            to = 1.2 * max(gcnt2.cell_type.expression$GCNT2) + 0.7*nrow(.),
+                            length.out = nrow(.))) %>%
+  dplyr::mutate(p.sig = case_when(
+    p_adj <= 0.0001 ~ "****",
+    p_adj <= 0.001 ~ "***",
+    p_adj <= 0.01 ~ "**",
+    TRUE ~ "*",
+  )) -> gcnt2.tukey.df
+
+ggplot2::ggplot(gcnt2.cell_type.expression, ggplot2::aes(x = manual_annotation, y = GCNT2)) +
+  ggplot2::geom_jitter(width = 0.05, size = 1) +
+  ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5, 
+                        fatten = 2, color = "magenta") +
+  ggpubr::stat_pvalue_manual(
+    data = gcnt2.tukey.df,
+    label = "p.sig",
+    y.position = "y_pos"
+  ) +
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("GCNT2 Expression") +
+  ggplot2::ggtitle("GCNT2 Expression vs. Cell Types Omitting GCNT2 Non-expressing Cells, Tukey Test")
+  ggplot2::theme_classic()
+```
 
 
