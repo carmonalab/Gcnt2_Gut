@@ -6,6 +6,8 @@ author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 # Downloading Processed Dataset
 
 ```{r downloading_processed_dataset}
+library(dplyr)
+
 ds_name <- "SalasA_2023_GSE214695"
 home.path <- file.path(getwd(), ds_name)
 output_data_path <- file.path(home.path, "output")
@@ -238,8 +240,6 @@ for (i in unique(Seurat::Idents(cmc))){
 Finally, we display an expression heatmap for the top 10 markers for each cluster.
 
 ```{r heatmap_DE}
-library(dplyr)
-
 cmc.markers %>%
   group_by(cluster) %>%
   filter(avg_log2FC > 1) %>%

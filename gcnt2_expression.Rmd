@@ -9,6 +9,7 @@ author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 
 ```{r downloading_processed_dataset}
 library(dplyr)
+
 ds_name <- "SalasA_2023_GSE214695"
 home.path <- file.path(getwd(), ds_name)
 output_data_path <- file.path(home.path, "output")
