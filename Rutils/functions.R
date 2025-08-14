@@ -312,7 +312,7 @@ multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
 signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox", 
                         plot_title = NULL){
     
-  # Performing Tukey HSD test in case the user demands it 
+  # Performing Tukey HSD test in case test = "Tukey" 
   if(test == "Tukey"){
     aov.model <- aov(data[[y]] ~ data[[x]])
     tukey.results <- TukeyHSD(aov.model)
@@ -341,24 +341,26 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
   # Initial ggplot2 object construction
   plot <- ggplot2::ggplot(data, ggplot2::aes(x = data[[x]], y = data[[y]], 
                                              fill = data[[x]])) +
-    ggplot2::scale_fill_manual(values = colors)
+    ggplot2::scale_fill_manual(values = colors, name = x) +
+    ggplot2::labs(fill = x)
   
   # Determining wanted plot type
   if(plot_type == "Violin"){
     plot <- plot + ggplot2::geom_violin()
   } else if(plot_type == "Scatter") {
-    plot <- plot + ggplot2::geom_jitter(width = 0.05, size = 1) +
+    plot <- plot + ggplot2::geom_jitter(width = 0.05, size = 1, show.legend = FALSE) +
       ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5,
-                            fatten = 2)
+                            fatten = 2, color = "magenta", show.legend = FALSE) +
+      ggplot2::labs(caption = "Magenta line indicates mean")
   } else if(plot_type == "Boxplot") {
     plot <- plot + ggplot2::geom_boxplot(alpha=0.2)
   } else {
     stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', 'Boxplot'")
   }
 
-  # Determining wanted test type
+  # Determining wanted test type and then adding significance levels to the plots
   if(test == "Wilcox") {
-    plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2)),
+    plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2, simplify = FALSE)),
                                method = "wilcox.test",
                                label = "p.signif")
   } else if(test == "Tukey"){
