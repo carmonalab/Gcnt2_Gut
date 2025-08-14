@@ -279,9 +279,11 @@ cell_type_classification <- function(object, cell_type, ref_map,
 
 multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
   
+  # Identifying all possible targets for a Wilcoxon test
   types <- unique(groups_df[[factor_col]])
   groups <- combn(types, 2, simplify = FALSE)
   
+  # Performing and binding all Wilcoxon tests (on all pairs) together 
   wilcox.results <- purrr::map_dfr(groups, ~{
   
     group1 <- .x[1]
@@ -310,6 +312,7 @@ multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
 signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox", 
                         plot_title = NULL){
     
+  # Performing Tukey HSD test in case the user demands it 
   if(test == "Tukey"){
     aov.model <- aov(data[[y]] ~ data[[x]])
     tukey.results <- TukeyHSD(aov.model)
@@ -331,13 +334,16 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
       )) -> tukey.df
   }
   
+  # Rainbow color palette generation 
   colors <- grDevices::rainbow(length(unique(data[[x]])))
   names(colors) <- unique(data[[x]])
     
+  # Initial ggplot2 object construction
   plot <- ggplot2::ggplot(data, ggplot2::aes(x = data[[x]], y = data[[y]], 
                                              fill = data[[x]])) +
     ggplot2::scale_fill_manual(values = colors)
   
+  # Determining wanted plot type
   if(plot_type == "Violin"){
     plot <- plot + ggplot2::geom_violin()
   } else if(plot_type == "Scatter") {
@@ -350,6 +356,7 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
     stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', 'Boxplot'")
   }
 
+  # Determining wanted test type
   if(test == "Wilcox") {
     plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2)),
                                method = "wilcox.test",
@@ -361,6 +368,7 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
     stop("Error: 'test' parameter must one of the follwing characters: 'Wilcox', 'Tukey'")
   }
   
+  # Determining wanted plot title
   if(is.null(plot_title)) {
     plot_title <- ggplot2::ggtitle(sprintf("%s vs. %s %s, %s Test", y, x, 
                              plot_type, test))
