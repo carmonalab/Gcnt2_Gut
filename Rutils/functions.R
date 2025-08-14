@@ -1,5 +1,6 @@
 library(dplyr)
 library(ggplot2)
+library(purrr)
 # takes a single-cell (genes x cells) matrix with named rows (given gene names) and the path to Ensembl annotation (output of biomart with fields "Gene name", "Gene Synonym" and "Gene stable ID"
 # Returns a matrix with filtered rows of genes with standard gene names. Of accepted synonyms were found, these are converted to standard gene names, as long as these are not redundant
 
@@ -274,3 +275,29 @@ cell_type_classification <- function(object, cell_type, ref_map,
   
   return(cells_of_interest)
 }
+
+multiple.wilcox.tests <- function(groups_df, factor_col, num_col, pairs_list){
+  group1 <- pairs_list[1]
+  group2 <- pairs_list[2]
+  
+  data1 <- groups_df %>%
+    dplyr::filter(.data[[factor_col]] == group1) %>%
+    dplyr::pull(.data[[num_col]])  
+  
+  data2 <- groups_df %>%
+    dplyr::filter(.data[[factor_col]] == group2) %>%
+    dplyr::pull(.data[[num_col]]) 
+  
+  test <- wilcox.test(data1, data2)
+  
+  return(tibble(
+    group1 = group1,
+    group2 = group2,
+    p.value = test$p.value
+  ))
+} 
+
+
+
+
+

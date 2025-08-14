@@ -35,40 +35,20 @@ cmc$GCNT2 <- gcnt2_counts
 ## ANOVA Test
 
 ```{r anova_test}
-cat("\033[31mAll Cells Considered\033[0m\n")
-
-cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.cell_type.expression <- cmc@meta.data[, c("manual_annotation", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
-print(summary(gcnt2.aov.model))
-cat("-----------------------------------------","\n")
+print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
-cat("\033[32mTukeyHSD\033[0m\n")
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
-print(gcnt2.tukey.results)
+print(as.data.frame(gcnt2.tukey.results[[1]]))
 
 cell_types <- unique(gcnt2.cell_type.expression$manual_annotation)
 groups <- combn(cell_types, 2, simplify = FALSE)
-gcnt2.wilcox.results <- purrr::map_dfr(groups, ~{
-  group1 <- .x[1]
-  group2 <- .x[2]
-  
-  data1 <- gcnt2.cell_type.expression %>%
-    dplyr::filter(manual_annotation == group1) %>%
-    dplyr::pull(GCNT2)
-  
-  data2 <- gcnt2.cell_type.expression %>%
-    dplyr::filter(manual_annotation == group2) %>%
-    dplyr::pull(GCNT2)
-  
-  test <- wilcox.test(data1, data2)
-  
-  tibble(
-    group1 = group1,
-    group2 = group2,
-    p.value = test$p.value
-  )
-})
+gcnt2.wilcox.results <- purrr::map_dfr(groups, 
+                                       ~multiple.wilcox.tests(gcnt2.cell_type.expression, 
+                                                              "manual_annotation", 
+                                                              "GCNT2", 
+                                                              .x))
 print(gcnt2.wilcox.results)
 ```
 
@@ -104,21 +84,21 @@ cat("Number of cells left in Seurat object:", length(Seurat::Cells(filtered_cmc)
 ## Statistical Tests
 
 ```{r stat_tests}
-cat("\033[31mOnly GCNT2 Expressing Cells Considered\033[0m\n")
-
-cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.cell_type.expression <- filtered_cmc@meta.data[, c("manual_annotation", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
-print(summary(gcnt2.aov.model))
-cat("-----------------------------------------","\n")
+print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
-cat("\033[32mTukey HSD\033[0m\n")
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
-print(gcnt2.tukey.results)
-cat("-----------------------------------------","\n")
+print(as.data.frame(gcnt2.tukey.results[[1]]))
 
-cat("\033[32mWilcoxon Test\033[0m\n")
-gcnt2.wilcox.results <- wilcox.test(gcnt2.cell_type.expression)
+cell_types <- unique(gcnt2.cell_type.expression$manual_annotation)
+groups <- combn(cell_types, 2, simplify = FALSE)
+gcnt2.wilcox.results <- purrr::map_dfr(groups, 
+                                       ~multiple.wilcox.tests(gcnt2.cell_type.expression, 
+                                                              "manual_annotation", 
+                                                              "GCNT2", 
+                                                              .x))
+print(gcnt2.wilcox.results)
 ```
 
 ## Diagnostic Plots
@@ -192,22 +172,24 @@ ggplot2::ggplot(gcnt2.cell_type.expression, ggplot2::aes(x = manual_annotation, 
 ## Statistical Tests
 
 ```{r stat_tests}
-cat("\033[31mAll Cells Considered\033[0m\n")
+# All Cells Considered
 
-cat("\033[32mANOVA Table\033[0m\n")
 gcnt2.condition.expression <- cmc@meta.data[, c("Treatment", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.condition.expression$GCNT2 ~ gcnt2.condition.expression$Treatment)
-print(summary(gcnt2.aov.model))
-cat("-----------------------------------------","\n")
+print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
-cat("\033[32mTukey HSD\033[0m\n")
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
-print(gcnt2.tukey.results)
-cat("-----------------------------------------","\n")
+print(as.data.frame(gcnt2.tukey.results[[1]]))
 
-cat("\033[32mWilcoxon Test\033[0m\n")
-gcnt2.wilcox.results <- wilcox.test(gcnt2.condition.expression)
-cat("---------------------------------------------------------------------------------------------------","\n")
+conditions <- unique(gcnt2.condition.expression$Treatement)
+groups <- combn(conditions, 2, simplify = FALSE)
+gcnt2.wilcox.results <- purrr::map_dfr(groups, 
+                                       ~multiple.wilcox.tests(gcnt2.condition.expression, 
+                                                              "Treatment", 
+                                                              "GCNT2", 
+                                                              .x))
+print(gcnt2.wilcox.results)
+# --------------------------------------------------------------------------------------------------
 
 cat("\033[31mOnly GCNT2 Expressing Cells Considered\033[0m\n")
 
