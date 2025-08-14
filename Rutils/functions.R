@@ -1,6 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(purrr)
+library(grDevices)
 # takes a single-cell (genes x cells) matrix with named rows (given gene names) and the path to Ensembl annotation (output of biomart with fields "Gene name", "Gene Synonym" and "Gene stable ID"
 # Returns a matrix with filtered rows of genes with standard gene names. Of accepted synonyms were found, these are converted to standard gene names, as long as these are not redundant
 
@@ -305,6 +306,72 @@ multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
   
   return(wilcox.results)
 } 
+
+signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox", 
+                        plot_title = NULL){
+    
+  if(test == "Tukey"){
+    aov.model <- aov(data[[y]] ~ data[[x]])
+    tukey.results <- TukeyHSD(aov.model)
+    
+    tukey.results[[1]] %>% 
+      as.data.frame() %>% 
+      dplyr::rename(p_adj = `p adj`) %>% 
+      dplyr::filter(p_adj <= 1 - attr(tukey.results, "conf.level")) %>% 
+      tibble::rownames_to_column(var = "groups") %>% 
+      tidyr::separate(groups, into = c("group1", "group2"), sep = "-") %>% 
+      dplyr::mutate(y_pos = seq(from = 1.2 * max(data[[y]]), 
+                                to = 1.2 * max(data[[y]]) + 0.7*nrow(.),
+                                length.out = nrow(.))) %>%
+      dplyr::mutate(p.sig = case_when(
+        p_adj <= 0.0001 ~ "****",
+        p_adj <= 0.001 ~ "***",
+        p_adj <= 0.01 ~ "**",
+        TRUE ~ "*",
+      )) -> tukey.df
+  }
+  
+  colors <- grDevices::rainbow(length(unique(data[[x]])))
+  names(colors) <- unique(data[[x]])
+    
+  plot <- ggplot2::ggplot(data, ggplot2::aes(x = data[[x]], y = data[[y]], 
+                                             fill = data[[x]])) +
+    ggplot2::scale_fill_manual(values = colors)
+  
+  if(plot_type == "Violin"){
+    plot <- plot + ggplot2::geom_violin()
+  } else if(plot_type == "Scatter") {
+    plot <- plot + ggplot2::geom_jitter(width = 0.05, size = 1) +
+      ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5,
+                            fatten = 2)
+  } else if(plot_type == "Boxplot") {
+    plot <- plot + ggplot2::geom_boxplot(alpha=0.2)
+  } else {
+    stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', 'Boxplot'")
+  }
+
+  if(test == "Wilcox") {
+    plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2)),
+                               method = "wilcox.test",
+                               label = "p.signif")
+  } else if(test == "Tukey"){
+    plot <- plot + ggpubr::stat_pvalue_manual(data = tukey.df, label = "p.sig",
+                               y.position = "y_pos")
+  } else {
+    stop("Error: 'test' parameter must one of the follwing characters: 'Wilcox', 'Tukey'")
+  }
+  
+  if(is.null(plot_title)) {
+    plot_title <- ggplot2::ggtitle(sprintf("%s vs. %s %s, %s Test", y, x, 
+                             plot_type, test))
+  }
+    
+  plot +
+    ggplot2::xlab(x) +
+    ggplot2::ylab(y) +
+    ggplot2::ggtitle(plot_title) +
+    ggplot2::theme_classic()
+}
 
 
 
