@@ -276,25 +276,34 @@ cell_type_classification <- function(object, cell_type, ref_map,
   return(cells_of_interest)
 }
 
-multiple.wilcox.tests <- function(groups_df, factor_col, num_col, pairs_list){
-  group1 <- pairs_list[1]
-  group2 <- pairs_list[2]
+multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
   
-  data1 <- groups_df %>%
-    dplyr::filter(.data[[factor_col]] == group1) %>%
-    dplyr::pull(.data[[num_col]])  
+  types <- unique(groups_df[[factor_col]])
+  groups <- combn(types, 2, simplify = FALSE)
   
-  data2 <- groups_df %>%
-    dplyr::filter(.data[[factor_col]] == group2) %>%
-    dplyr::pull(.data[[num_col]]) 
+  wilcox.results <- purrr::map_dfr(groups, ~{
   
-  test <- wilcox.test(data1, data2)
+    group1 <- .x[1]
+    group2 <- .x[2]
+    
+    data1 <- groups_df %>%
+      dplyr::filter(.data[[factor_col]] == group1) %>%
+      dplyr::pull(.data[[num_col]])  
+    
+    data2 <- groups_df %>%
+      dplyr::filter(.data[[factor_col]] == group2) %>%
+      dplyr::pull(.data[[num_col]]) 
+    
+    test <- wilcox.test(data1, data2)
+    
+    tibble(
+      group1 = group1,
+      group2 = group2,
+      p.value = test$p.value
+    )
+  })
   
-  return(tibble(
-    group1 = group1,
-    group2 = group2,
-    p.value = test$p.value
-  ))
+  return(wilcox.results)
 } 
 
 
