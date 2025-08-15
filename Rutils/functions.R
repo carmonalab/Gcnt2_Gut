@@ -330,9 +330,22 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
         p_adj <= 0.0001 ~ "****",
         p_adj <= 0.001 ~ "***",
         p_adj <= 0.01 ~ "**",
-        TRUE ~ "*",
-      )) -> tukey.df
-  }
+        TRUE ~ "*")) -> tukey.df
+  
+  # Performing Wilcoxon test in case test = "Wilcox"   
+  } else if(test == "Wilcox") {
+    wilcox.df <- multiple.wilcox.tests(data, x, y)
+    wilcox.df %>% 
+      dplyr::filter(p.value <= 0.05) %>% 
+      dplyr::mutate(y_pos = seq(from = 1.2 * max(data[[y]]), 
+                                to = 1.2 * max(data[[y]]) + 0.7*nrow(.),
+                                length.out = nrow(.))) %>%
+      dplyr::mutate(p.sig = case_when(
+        p.value <= 0.0001 ~ "****",
+        p.value <= 0.001 ~ "***",
+        p.value <= 0.01 ~ "**",
+        TRUE ~ "*")) -> wilcox.df
+  } 
   
   # Rainbow color palette generation 
   colors <- grDevices::rainbow(length(unique(data[[x]])))
@@ -360,9 +373,11 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
 
   # Determining wanted test type and then adding significance levels to the plots
   if(test == "Wilcox") {
-    plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2, simplify = FALSE)),
-                               method = "wilcox.test",
-                               label = "p.signif")
+    # plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2, simplify = FALSE)),
+    #                            method = "wilcox.test",
+    #                            label = "p.signif")
+    plot <- plot + ggpubr::stat_pvalue_manual(data = wilcox.df, label = "p.sig",
+                                              y.position = "y_pos")
   } else if(test == "Tukey"){
     plot <- plot + ggpubr::stat_pvalue_manual(data = tukey.df, label = "p.sig",
                                y.position = "y_pos")
