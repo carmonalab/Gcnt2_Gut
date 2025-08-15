@@ -2,6 +2,7 @@ library(dplyr)
 library(ggplot2)
 library(purrr)
 library(grDevices)
+library(tidyr)
 # takes a single-cell (genes x cells) matrix with named rows (given gene names) and the path to Ensembl annotation (output of biomart with fields "Gene name", "Gene Synonym" and "Gene stable ID"
 # Returns a matrix with filtered rows of genes with standard gene names. Of accepted synonyms were found, these are converted to standard gene names, as long as these are not redundant
 
@@ -277,7 +278,8 @@ cell_type_classification <- function(object, cell_type, ref_map,
   return(cells_of_interest)
 }
 
-multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
+multiple.wilcox.tests <- function(groups_df, factor_col, num_col, 
+                                  alternative = "two.sided"){
   
   # Identifying all possible targets for a Wilcoxon test
   types <- unique(groups_df[[factor_col]])
@@ -297,19 +299,21 @@ multiple.wilcox.tests <- function(groups_df, factor_col, num_col){
       dplyr::filter(.data[[factor_col]] == group2) %>%
       dplyr::pull(.data[[num_col]]) 
     
-    test <- wilcox.test(data1, data2)
+    test <- wilcox.test(data1, data2, alternative = alternative)
     
     tibble(
       group1 = group1,
       group2 = group2,
-      p.value = test$p.value
-    )
+      p.value = test$p.value)
   })
+  
+  wilcox.results$p.value <- p.adjust(wilcox.results$p.value, method = "fdr")
   
   return(wilcox.results)
 } 
 
 signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox", 
+                        alternative = "two.sided", conf.level = 0.95, 
                         plot_title = NULL){
     
   # Performing Tukey HSD test in case test = "Tukey" 
@@ -319,24 +323,10 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
     
     tukey.results[[1]] %>% 
       as.data.frame() %>% 
-      dplyr::rename(p_adj = `p adj`) %>% 
-      dplyr::filter(p_adj <= 1 - attr(tukey.results, "conf.level")) %>% 
+      dplyr::rename(p.value = `p adj`) %>% 
+      dplyr::filter(p.value <= 1 - conf.level) %>% 
       tibble::rownames_to_column(var = "groups") %>% 
       tidyr::separate(groups, into = c("group1", "group2"), sep = "-") %>% 
-      dplyr::mutate(y_pos = seq(from = 1.2 * max(data[[y]]), 
-                                to = 1.2 * max(data[[y]]) + 0.7*nrow(.),
-                                length.out = nrow(.))) %>%
-      dplyr::mutate(p.sig = case_when(
-        p_adj <= 0.0001 ~ "****",
-        p_adj <= 0.001 ~ "***",
-        p_adj <= 0.01 ~ "**",
-        TRUE ~ "*")) -> tukey.df
-  
-  # Performing Wilcoxon test in case test = "Wilcox"   
-  } else if(test == "Wilcox") {
-    wilcox.df <- multiple.wilcox.tests(data, x, y)
-    wilcox.df %>% 
-      dplyr::filter(p.value <= 0.05) %>% 
       dplyr::mutate(y_pos = seq(from = 1.2 * max(data[[y]]), 
                                 to = 1.2 * max(data[[y]]) + 0.7*nrow(.),
                                 length.out = nrow(.))) %>%
@@ -344,8 +334,42 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
         p.value <= 0.0001 ~ "****",
         p.value <= 0.001 ~ "***",
         p.value <= 0.01 ~ "**",
+        TRUE ~ "*")) -> tukey.df
+  
+  # Performing Wilcoxon test in case test = "Wilcox"   
+  } else if(test == "Wilcox") {
+    wilcox.df <- multiple.wilcox.tests(data, x, y, alternative = alternative)
+    wilcox.df %>% 
+      dplyr::filter(p.value <= 1 - conf.level) %>% 
+      dplyr::mutate(y_pos = seq(from = 1.2 * max(data[[y]]), 
+                               to = 1.2 * max(data[[y]]) + 0.7*nrow(.),
+                               length.out = nrow(.))) %>%
+      dplyr::mutate(p.sig = case_when(
+        p.value <= 0.0001 ~ "****",
+        p.value <= 0.001 ~ "***",
+        p.value <= 0.01 ~ "**",
         TRUE ~ "*")) -> wilcox.df
-  } 
+    
+  # Performing T-test in case test = "T-test"  
+  } else if(test == "T-test") {
+    t_test.res <- pairwise.t.test(data[[y]], data[[x]], alternative = alternative,
+                                  p.adjust.method = "fdr")
+    
+    t_test.res$p.value %>% 
+      as.data.frame() %>%
+      tibble::rownames_to_column(var = "group1") %>% 
+      pivot_longer(-group1, names_to = "group2", values_to = "p.value") %>%
+      filter(!is.na(p.value)) %>% 
+      dplyr::filter(p.value <= 1 - conf.level) %>% 
+      dplyr::mutate(y_pos = seq(from = 1.2 * max(data[[y]]), 
+                                to = 1.2 * max(data[[y]]) + 0.7*nrow(.),
+                                length.out = nrow(.))) %>%
+      dplyr::mutate(p.sig = case_when(
+        p.value <= 0.0001 ~ "****",
+        p.value <= 0.001 ~ "***",
+        p.value <= 0.01 ~ "**",
+        TRUE ~ "*")) -> t_test.df
+  }
   
   # Rainbow color palette generation 
   colors <- grDevices::rainbow(length(unique(data[[x]])))
@@ -368,21 +392,21 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
   } else if(plot_type == "Boxplot") {
     plot <- plot + ggplot2::geom_boxplot(alpha=0.2)
   } else {
-    stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', 'Boxplot'")
+    stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', or 'Boxplot'")
   }
 
   # Determining wanted test type and then adding significance levels to the plots
   if(test == "Wilcox") {
-    # plot <- plot + ggpubr::stat_compare_means(comparisons = list(combn(unique(data[[x]]), 2, simplify = FALSE)),
-    #                            method = "wilcox.test",
-    #                            label = "p.signif")
     plot <- plot + ggpubr::stat_pvalue_manual(data = wilcox.df, label = "p.sig",
                                               y.position = "y_pos")
   } else if(test == "Tukey"){
     plot <- plot + ggpubr::stat_pvalue_manual(data = tukey.df, label = "p.sig",
                                y.position = "y_pos")
+  } else if(test == "T-test"){
+    plot <- plot + ggpubr::stat_pvalue_manual(data = t_test.df, label = "p.sig",
+                                              y.position = "y_pos")
   } else {
-    stop("Error: 'test' parameter must one of the follwing characters: 'Wilcox', 'Tukey'")
+    stop("Error: 'test' parameter must one of the follwing characters: 'Wilcox', 'Tukey', or 'T-test'")
   }
   
   # Determining wanted plot title
@@ -390,7 +414,8 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
     plot_title <- ggplot2::ggtitle(sprintf("%s vs. %s %s, %s Test", y, x, 
                              plot_type, test))
   }
-    
+   
+  # Plotting ggplot2 object 
   plot +
     ggplot2::xlab(x) +
     ggplot2::ylab(y) +

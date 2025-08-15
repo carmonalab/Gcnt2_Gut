@@ -1,6 +1,6 @@
 ---
 title: "Analysis of GCNT2 Expression Profile"
-author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
+author: "A. Mihaylov <aleksandar.mihaylov@epfl.ch>"
 ---
 
 # Preparing Finely Annotated Dataset
@@ -34,26 +34,39 @@ cmc$GCNT2 <- gcnt2_counts
 
 ## ANOVA Test
 
-```{r anova_test}
+```{r in_stat_tests}
 gcnt2.cell_type.expression <- cmc@meta.data[, c("manual_annotation", "GCNT2")]
+
+# Anova table across cell types
 gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
 print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
+# Post-hoc Tukey HSD test for all pairs of cell types
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
 print(as.data.frame(gcnt2.tukey.results[[1]]))
 
+# Wilcoxon test for all pairs of cell types
 gcnt2.wilcox.results <- multiple.wilcox.tests(gcnt2.cell_type.expression, 
                                               "manual_annotation", 
                                               "GCNT2") 
 print(gcnt2.wilcox.results)
+
+# Two-sample t-test for all pairs of cell types
+gcnt2.t_test.results <- pairwise.t.test(gcnt2.cell_type.expression$GCNT2,
+                                        gcnt2.cell_type.expression$manual_annotation, 
+                                        alternative = "two.sided", 
+                                        p.adjust.method = "fdr")
+print(as.data.frame(gcnt2.t_test.results$p.value))
 ```
 
 ## Initial Diagnostic Plots
 
 ```{r in_diganostic_plots}
+# Violin plots of GCNT2 expression across cell types
 Seurat::VlnPlot(cmc, features = "GCNT2", group.by = "manual_annotation") + 
   ggplot2::ggtitle("Violin Plots of GCNT2 Expression across Cell Types")
 
+# Box plots of GCNT2 expression across cell types
 ggplot2::ggplot(gcnt2.cell_type.expression, 
                 ggplot2::aes(x = manual_annotation, y = GCNT2)) + 
   ggplot2::geom_boxplot(fill="slateblue", alpha=0.2) + 
@@ -61,9 +74,11 @@ ggplot2::ggplot(gcnt2.cell_type.expression,
   ggplot2::ylab("GCNT2 Expression") +
   ggplot2::ggtitle("Boxplot of GCNT2 Expression across Cell Types")
 
+# Ridge plots of GCNT2 expression across cell types
 Seurat::RidgePlot(cmc, features = "GCNT2", group.by = "manual_annotation") +
   ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Cell Types")
 
+# Feature plot of GCNT2 on Umap reduction
 Seurat::FeaturePlot(cmc, features = "GCNT2") +
   ggplot2::ggtitle("Feature Plot of GCNT2 Expression across Cell Types")
 ```
@@ -79,26 +94,39 @@ cat("Number of cells left in Seurat object:", length(Seurat::Cells(filtered_cmc)
 
 ## Statistical Tests
 
-```{r stat_tests}
+```{r stat_tests_per_cell_type}
 gcnt2.cell_type.expression <- filtered_cmc@meta.data[, c("manual_annotation", "GCNT2")]
+
+# Anova table across cell types
 gcnt2.aov.model <- aov(gcnt2.cell_type.expression$GCNT2 ~ gcnt2.cell_type.expression$manual_annotation)
 print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
+# Post-hoc Tukey HSD test for all pairs of cell types
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
 print(as.data.frame(gcnt2.tukey.results[[1]]))
 
+# Wilcoxon test for all pairs of cell types
 gcnt2.wilcox.results <- multiple.wilcox.tests(gcnt2.cell_type.expression, 
                                               "manual_annotation", 
                                               "GCNT2") 
 print(gcnt2.wilcox.results)
+
+# Two-sample t-test for all pairs of cell types
+gcnt2.t_test.results <- pairwise.t.test(gcnt2.cell_type.expression$GCNT2,
+                                        gcnt2.cell_type.expression$manual_annotation, 
+                                        alternative = "two.sided", 
+                                        p.adjust.method = "fdr")
+print(as.data.frame(gcnt2.t_test.results$p.value))
 ```
 
 ## Diagnostic Plots
 
 ```{r plots_per_cell_type}
+# Violin plots of GCNT2 expression across cell types
 Seurat::VlnPlot(filtered_cmc, "GCNT2", group.by = "manual_annotation") +
   ggplot2::ggtitle("Violin Plots of GCNT2 Expression across Cell Types Omitting GCNT2 Non-expressing Cells") 
 
+# Box plots of GCNT2 expression across cell types
 ggplot2::ggplot(gcnt2.cell_type.expression, 
                 ggplot2::aes(x = manual_annotation, y = GCNT2)) + 
   ggplot2::geom_boxplot(fill="slateblue", alpha=0.2) + 
@@ -106,62 +134,99 @@ ggplot2::ggplot(gcnt2.cell_type.expression,
   ggplot2::ylab("GCNT2 Expression") +
   ggplot2::ggtitle("Boxplot of GCNT2 Expression across Cell Types Omitting GCNT2 Non-expressing Cells")
 
+# Ridge plots of GCNT2 expression across cell types
 Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "manual_annotation") +
   ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Cell Types Omitting GCNT2 Non-expressing Cells")
 ```
 
 ## Significance Plots
 
-```{r significance_plots}
+In this section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per cell type, and observe the statistical difference in GCNT2 expression between cell types. 
+
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
+
+
+```{r significance_plots_per_cell_type}
 signif.plot(gcnt2.cell_type.expression, x = "manual_annotation", y = "GCNT2", 
             plot_type = "Violin", test = "Wilcox",
             plot_title = "GCNT2 Expression vs. Cell Type Omitting GCNT2 Non-expressing Cells, Wilcoxon Test")
 
 signif.plot(gcnt2.cell_type.expression, x = "manual_annotation", y = "GCNT2", 
-            plot_type = "Boxplot", test = "Tukey",
-            plot_title = "GCNT2 Expression vs. Cell Type Omitting GCNT2 Non-expressing Cells, Tukey Test")
+            plot_type = "Boxplot", test = "T-test",
+            plot_title = "GCNT2 Expression vs. Cell Type Omitting GCNT2 Non-expressing Cells, T-Test")
 ```
 
 # Analysis per Condition
 
 ## Statistical Tests
 
-```{r stat_tests}
+```{r stat_tests_per_condition}
 # All Cells Considered
 
+# Anova table across gut conditions
 gcnt2.condition.expression <- cmc@meta.data[, c("Treatment", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.condition.expression$GCNT2 ~ gcnt2.condition.expression$Treatment)
 print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
+# Post-hoc Tukey HSD test for all pairs of gut conditions
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
 print(as.data.frame(gcnt2.tukey.results[[1]]))
 
+# Wilcoxon test for all pairs of gut conditions
 gcnt2.wilcox.results <- multiple.wilcox.tests(gcnt2.condition.expression, 
                                               "Treatment", 
                                               "GCNT2") 
 print(gcnt2.wilcox.results)
+
+# Two-sample t-test for all pairs of gut conditions
+gcnt2.t_test.results <- pairwise.t.test(gcnt2.condition.expression$GCNT2,
+                                        gcnt2.condition.expression$Treatment, 
+                                        alternative = "two.sided", 
+                                        p.adjust.method = "fdr")
+print(as.data.frame(gcnt2.t_test.results$p.value))
 # --------------------------------------------------------------------------------------------------
 # Only GCNT2 Expressing Cells Considered
 
+# Anova table across gut conditions
 gcnt2.condition.expression <- filtered_cmc@meta.data[, c("Treatment", "GCNT2")]
 gcnt2.aov.model <- aov(gcnt2.condition.expression$GCNT2 ~ gcnt2.condition.expression$Treatment)
 print(as.data.frame(summary(gcnt2.aov.model)[[1]]))
 
+# Post-hoc Tukey HSD test for all pairs of gut conditions
 gcnt2.tukey.results <- TukeyHSD(gcnt2.aov.model)
 print(as.data.frame(gcnt2.tukey.results[[1]]))
 
+# Wilcoxon test for all pairs of gut conditions
 gcnt2.wilcox.results <- multiple.wilcox.tests(gcnt2.condition.expression, 
                                               "Treatment", 
                                               "GCNT2") 
 print(gcnt2.wilcox.results)
+
+# Two-sample t-test for all pairs of gut conditions
+gcnt2.t_test.results <- pairwise.t.test(gcnt2.condition.expression$GCNT2,
+                                        gcnt2.condition.expression$Treatment, 
+                                        alternative = "two.sided", 
+                                        p.adjust.method = "fdr")
+print(as.data.frame(gcnt2.t_test.results$p.value))
 ```
 
 ## Diagnostic Plots
 
 ```{r plots_per_condition}
+# Violin plots of GCNT2 expression across gut conditions
 Seurat::VlnPlot(filtered_cmc, "GCNT2", group.by = "Treatment") +
   ggplot2::ggtitle("Violin Plots of GCNT2 Expression across Conditions Omitting GCNT2 Non-expressing Cells") 
 
+# Box plots plots of GCNT2 expression across gut conditions
 ggplot2::ggplot(gcnt2.condition.expression, 
                 ggplot2::aes(x = Treatment, y = GCNT2)) + 
   ggplot2::geom_boxplot(fill="slateblue", alpha=0.2) + 
@@ -169,13 +234,26 @@ ggplot2::ggplot(gcnt2.condition.expression,
   ggplot2::ylab("GCNT2 Expression") +
   ggplot2::ggtitle("Boxplot of GCNT2 Expression across Conditions Omitting GCNT2 Non-expressing Cells")
 
+# Ridge plots of GCNT2 expression across gut conditions
 Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "Treatment") +
   ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Conditions Omitting GCNT2 Non-expressing Cells")
 ```
 
 ## Significance Plots
 
-```{r significance_plots}
+In this section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per gut condition, and observe the statistical difference in GCNT2 expression between gut conditions. 
+
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
+```{r significance_plots_per_condition}
 signif.plot(gcnt2.condition.expression, x = "Treatment", y = "GCNT2", 
             plot_type = "Scatter", test = "Wilcox",
             plot_title = "GCNT2 Expression vs. Gut Condition Omitting GCNT2 Non-expressing Cells, Wilcoxon Test")
