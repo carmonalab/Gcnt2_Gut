@@ -32,7 +32,7 @@ cmc$GCNT2 <- gcnt2_counts
 
 # Initial Analysis per Cell Type
 
-## ANOVA Test
+## Initial Statistical Tests
 
 ```{r in_stat_tests}
 gcnt2.cell_type.expression <- cmc@meta.data[, c("manual_annotation", "GCNT2")]
@@ -141,7 +141,7 @@ Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "manual_annotatio
 
 ## Significance Plots
 
-In this section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per cell type, and observe the statistical difference in GCNT2 expression between cell types. 
+In this sub-section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per cell type, and observe the statistical difference in GCNT2 expression between cell types. 
 
 *Significance levels*
 
@@ -241,7 +241,7 @@ Seurat::RidgePlot(filtered_cmc, features = "GCNT2", group.by = "Treatment") +
 
 ## Significance Plots
 
-In this section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per gut condition, and observe the statistical difference in GCNT2 expression between gut conditions. 
+In this sub-section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per gut condition, and observe the statistical difference in GCNT2 expression between gut conditions. 
 
 *Significance levels*
 
@@ -261,6 +261,93 @@ signif.plot(gcnt2.condition.expression, x = "Treatment", y = "GCNT2",
 signif.plot(gcnt2.condition.expression, x = "Treatment", y = "GCNT2", 
             plot_type = "Boxplot", test = "Tukey",
             plot_title = "GCNT2 Expression vs. Gut Condition Omitting GCNT2 Non-expressing Cells, Tukey Test")
+```
+
+# Analysis per Cell Type per Gut Condition
+
+In this section, we iterate over each cell type and subdivide into distinct gut conditions. This way, we will analyze GCNT2 expression per cell type per gut condition.
+
+```{r setting_idents}
+Seurat::Idents(filtered_cmc) <- "manual_annotation"
+
+cell_types <- unique(Seurat::Idents(filtered_cmc))
+conditions <- unique(filtered_cmc$Treatment)
+```
+
+## Heatmap
+
+```{r dot_plot}
+gcnt2.cell.condition <- Seurat::FetchData(filtered_cmc, vars = c("GCNT2", "manual_annotation", "Treatment"))
+
+gcnt2.cell.condition %>% 
+  dplyr::group_by(manual_annotation, Treatment) %>% 
+  summarise(mean_GCNT2 = mean(GCNT2), .groups = "drop") -> mean.gcnt2.df 
+  # tidyr::pivot_wider(names_from = Treatment, values_from = mean_GCNT2) %>% 
+  # tibble::column_to_rownames(var = "manual_annotation") -> mean.gcnt2.df 
+
+ggplot2::ggplot(mean.gcnt2.df, ggplot2::aes(x = Treatment, y = manual_annotation, fill = mean_GCNT2)) +
+  ggplot2::geom_tile()
+```
+
+
+## Anova Tables
+
+```{r anova_tables}
+for(cell_type in cell_types){
+  cell_type_meta <- subset(filtered_cmc, idents = cell_type)@meta.data
+  condition_frequency <- table(cell_type_meta$Treatment) 
+  
+  un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
+  
+  if(length(un_rep_conditions) < length(unique(cell_type_meta$Treatment))) {
+    cell_type_meta <- subset(cell_type_meta, subset = !(Treatment %in% un_rep_conditions))
+    gcnt2.aov.model <- aov(cell_type_meta$GCNT2 ~ cell_type_meta$Treatment)
+    cat(sprintf("\033[31m%s Cells\033[39m\n", cell_type))
+    print(summary(gcnt2.aov.model))
+    cat("\n")
+  }
+}
+```
+
+
+## Ridge Plots
+
+```{r ridge_plots}
+for(cell_type in cell_types){
+  
+  cell_type_seurat <- subset(filtered_cmc, idents = cell_type)
+  condition_frequency <- table(cell_type_seurat$Treatment) 
+  
+  un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
+  
+  if (length(un_rep_conditions) < length(unique(cell_type_seurat$Treatment))){
+    cell_type_seurat <- subset(cell_type_seurat, subset = !(Treatment %in% un_rep_conditions)) 
+    
+    print(Seurat::RidgePlot(cell_type_seurat, features = "GCNT2", group.by = "Treatment") + 
+        ggplot2::ggtitle(sprintf("%s Cells", cell_type)))
+  }
+}
+```
+
+## Volcano Plots
+
+
+
+## Significance Plots
+
+```{r significance_plots}
+for(cell_type in cell_types){
+  cell_type_meta <- subset(filtered_cmc, idents = cell_type)@meta.data
+  condition_frequency <- table(cell_type_meta$Treatment) 
+  
+  un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
+  
+  if(length(un_rep_conditions) < length(unique(cell_type_meta$Treatment))) {
+    cell_type_meta <- subset(cell_type_meta, subset = !(Treatment %in% un_rep_conditions))
+    print(signif.plot(cell_type_meta, x = "Treatment", y = "GCNT2", plot_type = "Boxplot",
+                      test = "T-test", plot_title = sprintf("%s Cells", cell_type)))
+  }
+}
 ```
 
 
