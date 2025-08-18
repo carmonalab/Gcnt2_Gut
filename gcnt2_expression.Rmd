@@ -90,6 +90,108 @@ filtered_cmc <- subset(cmc, subset = GCNT2 > 0)
 cat("Number of cells left in Seurat object:", length(Seurat::Cells(filtered_cmc)))
 ```
 
+# Filtering Out Analysis
+
+Above, we filtered out the large amount of GCNT2 non-expressing cells. Nevertheless, it is relevant to know whether the filtering out was homogeneous. That is, do all cell types, all individuals, and gut conditions display the same filtering out ratio?
+
+We begin by creating a new binary metadata column indicating whether a cell expresses GCNT2.
+
+```{r binary_gcnt2}
+cmc$binary_gcnt2 <- ifelse(cmc$GCNT2 > 0, TRUE, FALSE)
+```
+
+## Per Cell Type 
+
+```{r cell_type_filtering}
+dittoSeq::dittoBarPlot(
+    object = cmc,
+    var = "binary_gcnt2",
+    group.by = "manual_annotation") + 
+  ggplot2::scale_fill_manual(values = c("TRUE" = "green", "FALSE" = "indianred2"),
+                             name = "GCNT2 Expression") +
+  ggplot2::ggtitle("Stacked Bar Plot of Percent of Cells Expressing GCNT2 per Cell Type") +
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("Percent of Cells")
+
+cmc@meta.data %>% 
+  dplyr::group_by(manual_annotation) %>% 
+  summarise(total_cells = n(),
+            gcnt2_expressing_cells = sum(binary_gcnt2),
+            filtering_ratio = gcnt2_expressing_cells*100/total_cells) -> cell_type_fr
+  
+cell_type_fr
+```
+
+## Per Gut Condition
+
+```{r condtion_filtering}
+dittoSeq::dittoBarPlot(
+    object = cmc,
+    var = "binary_gcnt2",
+    group.by = "Treatment") + 
+  ggplot2::scale_fill_manual(values = c("TRUE" = "green", "FALSE" = "indianred2"),
+                             name = "GCNT2 Expression") +
+  ggplot2::ggtitle("Stacked Bar Plot of Percent of Cells Expressing GCNT2 per Gut Condition") +
+  ggplot2::xlab("Gut Condition") +
+  ggplot2::ylab("Percent of Cells")
+
+cmc@meta.data %>% 
+  dplyr::group_by(Treatment) %>% 
+  summarise(total_cells = n(),
+            gcnt2_expressing_cells = sum(binary_gcnt2),
+            filtering_ratio = gcnt2_expressing_cells*100/total_cells) -> treatment_fr
+  
+treatment_fr
+```
+
+## Per Cell Type & Gut Condition
+
+```{r cell_type_condition_filtering}
+cmc@meta.data %>% 
+  dplyr::group_by(manual_annotation, Treatment) %>% 
+  summarise(
+    total_cells = n(),
+    gcnt2_expressing_cells = sum(binary_gcnt2),
+    filtering_ratio = gcnt2_expressing_cells*100/total_cells
+  ) -> cell_type_treatment_fr
+
+ggplot2::ggplot(cell_type_treatment_fr, ggplot2::aes(x = Treatment, y = manual_annotation,
+                                                     fill = filtering_ratio)) +
+  ggplot2::geom_tile()+
+  ggplot2::geom_text(ggplot2::aes(label = round(filtering_ratio, 3)), color = "black", size = 4) +
+  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen1",
+                               name = "Filtering Ratio") +
+  ggplot2::ggtitle("Heatmap of GCNT2 Expression Filtering Ratio across 
+                   Cell Types and Gut Conditions") +
+  ggplot2::xlab("Gut Condition") +
+  ggplot2::ylab("Cell Type") +
+  ggplot2::theme_classic()
+```
+
+## Per Cell Type & Individual
+
+```{r cell_type_condition_filtering}
+cmc@meta.data %>% 
+  dplyr::group_by(manual_annotation, Sample) %>% 
+  summarise(
+    total_cells = n(),
+    gcnt2_expressing_cells = sum(binary_gcnt2),
+    filtering_ratio = gcnt2_expressing_cells*100/total_cells
+  ) -> cell_type_sample_fr
+
+ggplot2::ggplot(cell_type_sample_fr, ggplot2::aes(x = manual_annotation, y = Sample,
+                                                     fill = filtering_ratio)) +
+  ggplot2::geom_tile()+
+  ggplot2::geom_text(ggplot2::aes(label = round(filtering_ratio, 3)), color = "black", size = 3) +
+  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen1",
+                               name = "Filtering Ratio") +
+  ggplot2::ggtitle("Heatmap of GCNT2 Expression Filtering Ratio across 
+                   Cell Types and Individuals") +
+  ggplot2::xlab("Cell Type") +
+  ggplot2::ylab("Individuals") + 
+  ggplot2::theme_classic()
+```
+
 # Analysis per Cell Type 
 
 ## Statistical Tests
@@ -282,11 +384,17 @@ gcnt2.cell.condition <- Seurat::FetchData(filtered_cmc, vars = c("GCNT2", "manua
 gcnt2.cell.condition %>% 
   dplyr::group_by(manual_annotation, Treatment) %>% 
   summarise(mean_GCNT2 = mean(GCNT2), .groups = "drop") -> mean.gcnt2.df 
-  # tidyr::pivot_wider(names_from = Treatment, values_from = mean_GCNT2) %>% 
-  # tibble::column_to_rownames(var = "manual_annotation") -> mean.gcnt2.df 
 
 ggplot2::ggplot(mean.gcnt2.df, ggplot2::aes(x = Treatment, y = manual_annotation, fill = mean_GCNT2)) +
-  ggplot2::geom_tile()
+  ggplot2::geom_tile() +
+  ggplot2::scale_fill_gradient(low = "yellow", high = "red") +
+  ggplot2::labs(title = "Heatmap of GCNT2 Expression across Cell Types and Gut Conditions, 
+                         Omitting GCNT2 Non-Expressing Cells",
+                fill = "Mean GCNT2 expression") +
+  ggplot2::xlab("Gut Condition") +
+  ggplot2::ylab("Cell Type") +
+  ggplot2::theme_classic()
+
 ```
 
 
@@ -329,10 +437,6 @@ for(cell_type in cell_types){
 }
 ```
 
-## Volcano Plots
-
-
-
 ## Significance Plots
 
 ```{r significance_plots}
@@ -349,6 +453,43 @@ for(cell_type in cell_types){
   }
 }
 ```
+
+# Pseudobulk 
+
+## Dataset Preparation
+
+Firstly, we aim to find aggregate GCNT2 expression per individual and cell type. Thus, for each cell type, we will have 18 values corresponding to the 18 distinct patients.
+
+```{r preparation}
+cmc_pseudo <- Seurat::AggregateExpression(cmc, features = "GCNT2", return.seurat = FALSE,
+                                          group.by = c("manual_annotation", "Sample"))
+cmc_pseudo <- cmc_pseudo[[1]] %>%
+  as.data.frame() %>% 
+  tidyr::pivot_longer(
+    cols = tidyr::everything(),
+    names_to = "cell_sample",
+    values_to = "GCNT2") %>%
+  separate(cell_sample, into = c("cell.type", "sample"), sep = "_")
+
+cmc_pseudo$treatment <- substr(cmc_pseudo$sample, 1, 2)
+
+cell_types <- unique(cmc_pseudo$cell.type)
+```
+
+## Significance Plots per Cell Type per Gut Condition
+
+Let us display again significance scatter plots per cell type per gut condition. Nonetheless, this time, all cells, even GCNT2 non-expressing cells, are taken into account. In addition, the scattered points represent pseudobulk results, per cell type and individual, instead of single cells. 
+
+```{r pseudo_significance_plots}
+for(cell_type in cell_types){
+  pseudo_cell_type <- subset(cmc_pseudo, subset = (cell.type == cell_type))
+  print(signif.plot(pseudo_cell_type, x = "treatment", y = "GCNT2", plot_type = "Scatter",
+                      test = "Wilcox", plot_title = sprintf("%s Cells", cell_type)))
+}
+```
+
+
+
 
 
 
