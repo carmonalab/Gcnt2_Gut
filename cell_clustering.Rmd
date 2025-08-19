@@ -381,7 +381,9 @@ qc_markers <- c("MS4A1", "FOXN1", "RAMP3", "COL1A1", "JCHAIN", "TPSAB1", "CTAG2"
 
 Seurat::Idents(cured_cmc) <- "manual_annotation"
 Seurat::VlnPlot(cured_cmc, features = qc_markers, stack = T, flip = T, fill.by = "ident",
-    assay = "RNA") + Seurat::NoLegend()
+    assay = "RNA") + Seurat::NoLegend() + 
+  ggplot2::ggtitle("Annotation Quality Control Violin Plots of Marker Genes") +
+  ggplot2::xlab("Cell Type")
 ```
 
 
