@@ -79,7 +79,7 @@ Seurat::RidgePlot(cmc, features = "GCNT2", group.by = "manual_annotation") +
   ggplot2::ggtitle("Ridge Plot of GCNT2 Expression across Cell Types")
 
 # Feature plot of GCNT2 on Umap reduction
-Seurat::FeaturePlot(cmc, features = "GCNT2") +
+Seurat::FeaturePlot(cmc, features = "GCNT2") + 
   ggplot2::ggtitle("Feature Plot of GCNT2 Expression across Cell Types")
 ```
 
@@ -159,7 +159,7 @@ ggplot2::ggplot(cell_type_treatment_fr, ggplot2::aes(x = Treatment, y = manual_a
                                                      fill = filtering_ratio)) +
   ggplot2::geom_tile()+
   ggplot2::geom_text(ggplot2::aes(label = round(filtering_ratio, 3)), color = "black", size = 4) +
-  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen1",
+  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
                                name = "Filtering Ratio") +
   ggplot2::ggtitle("Heatmap of GCNT2 Expression Filtering Ratio across 
                    Cell Types and Gut Conditions") +
@@ -183,7 +183,7 @@ ggplot2::ggplot(cell_type_sample_fr, ggplot2::aes(x = manual_annotation, y = Sam
                                                      fill = filtering_ratio)) +
   ggplot2::geom_tile()+
   ggplot2::geom_text(ggplot2::aes(label = round(filtering_ratio, 3)), color = "black", size = 3) +
-  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen1",
+  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
                                name = "Filtering Ratio") +
   ggplot2::ggtitle("Heatmap of GCNT2 Expression Filtering Ratio across 
                    Cell Types and Individuals") +
