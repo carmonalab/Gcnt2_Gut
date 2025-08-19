@@ -32,7 +32,7 @@ cmc <- Seurat::FindVariableFeatures(cmc, selection.method = "dispersion", nfeatu
 top_5 <- head(SeuratObject::VariableFeatures(cmc), 5)
 plot_1 <- Seurat::VariableFeaturePlot(cmc)
 plot_1 <- Seurat::LabelPoints(plot = plot_1, points = top_5, repel = TRUE, xnudge = 0, ynudge = 0)
-plot_1
+plot_1 + ggplot2::ggtitle("Variable Feature Plot for Colonic Mucosa Cells")
 ```
 
 # Scaling the Data
@@ -77,10 +77,11 @@ Then, we look at the **Dimension Plot** to visualize how the first two PCs separ
 in our dataset.
 
 ```{r dim_plot}
-Seurat::DimPlot(cmc, dims = c(1, 2), reduction = "pca")
+Seurat::DimPlot(cmc, dims = c(1, 2), reduction = "pca") + 
+  ggplot2::ggtitle("Cell Distribution across PCs 1 and 2")
 ```
 
-Finally, let us vsiaulize the PCs in a **Dimension Heatmap**.
+Finally, let us vsiaulize the PCs in a Dimensional Heatmap.
 
 ```{r dim_heatmap, fig.height=20, fig.show='hold'}
 Seurat::DimHeatmap(cmc, dims = 1:9, cells = 1000, balanced = TRUE)
@@ -93,7 +94,8 @@ We use the **Elbow plot** and thus the **Elbow method** to determine how many PC
 keep for downstream analyses. 
 
 ```{r elbow_plot}
-Seurat::ElbowPlot(cmc, ndims = 32)
+Seurat::ElbowPlot(cmc, ndims = 32) +
+  ggplot2::ggtitle("Elbow Plot for PCs 1 through 32")
 ```
 
 Since it is better to err on the higher side of chosen PCs, we will use 15 dimensions 
@@ -127,7 +129,8 @@ UMAP for resolution equal to 0.8.
 ```{r umap_res_1}
 Seurat::Idents(cmc) <- "RNA_snn_res.0.8"
 cmc <- Seurat::RunUMAP(cmc, dims = 1:15, seed.use = 42)
-Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) 
+Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) +
+  ggplot2::ggtitle("Umap of KNN Clustering with 0.8 Resolution")
 ```
 
 UMAP for resolution equal to 0.6.
@@ -136,7 +139,8 @@ UMAP for resolution equal to 0.6.
 ```{r umap_res_2}
 Seurat::Idents(cmc) <- "RNA_snn_res.0.6"
 cmc <- Seurat::RunUMAP(cmc, dims = 1:15, seed.use = 42)
-Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) 
+Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) +
+  ggplot2::ggtitle("Umap of KNN Clustering with 0.6 Resolution")
 ```
 
 UMAP for resolution equal to 0.3.
@@ -145,7 +149,8 @@ UMAP for resolution equal to 0.3.
 ```{r umap_res_3}
 Seurat::Idents(cmc) <- "RNA_snn_res.0.3"
 cmc <- Seurat::RunUMAP(cmc, dims = 1:15, seed.use = 42)
-Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) 
+Seurat::DimPlot(cmc, reduction = "umap", label = TRUE) +
+  ggplot2::ggtitle("Umap of KNN Clustering with 0.3 Resolution")
 ```
 
 For downstream analyses, we choose the resolution of 0.3.
@@ -174,12 +179,9 @@ The cell below displays the positive differentially expressed genes per cluster.
 
 ```{r display_DE}
 for (i in unique(Seurat::Idents(cmc))){
-  title <- paste("Cluster", i)
+  cat(i, "\n")
   df <- get(sprintf("cluster%d.markers", as.integer(i)))
-  fake_row <- setNames(as.data.frame(matrix(rep(title, ncol(df)), nrow=1)), colnames(df))
-  df_with_title <- rbind(fake_row, df)
-  rownames(df_with_title)[1] <- title
-  print(df_with_title)
+  print(df)
 }
 ```
 
@@ -203,8 +205,9 @@ for (i in unique(Seurat::Idents(cmc))){
   cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
   top_4_DE_genes <- rownames(head(cluster_of_interest, 4))
   plots <- lapply(top_4_DE_genes, function(gene) {
-  Seurat::VlnPlot(cmc, features = gene) + ggplot2::xlab("Clusters") + Seurat::NoLegend()
-})
+  Seurat::VlnPlot(cmc, features = gene) + ggplot2::xlab("Clusters") + Seurat::NoLegend() +
+      ggplot2::ggtitle(paste(gene, "Cluster", i))
+  })
   combined <- patchwork::wrap_plots(plots, ncol = 2)
   print(combined)
 }
@@ -219,12 +222,13 @@ top_DE_genes <- c()
 for (i in unique(Seurat::Idents(cmc))){
   cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
   top_1_DE_gene <- rownames(head(cluster_of_interest, 1))
-  top_DE_genes[[as.integer(i)]] <- top_1_DE_gene
+  top_DE_genes[[i]] <- top_1_DE_gene
 }
 
-plots <- lapply(top_DE_genes, function(gene){
-  Seurat::FeaturePlot(cmc, features = gene) + Seurat::NoLegend()
-})
+plots <- mapply(function(gene, key){
+  Seurat::FeaturePlot(cmc, features = gene) + Seurat::NoLegend() +
+    ggplot2::ggtitle(paste(gene, "Cluster", key))
+}, gene = top_DE_genes, key = names(top_DE_genes), SIMPLIFY = FALSE)
 combined <- patchwork::wrap_plots(plots, ncol = 3, nrow = 5)
 print(combined)
 ```
@@ -232,7 +236,7 @@ print(combined)
 ```{r feature_plots}
 for (i in unique(Seurat::Idents(cmc))){
   cluster_of_interest <- get(sprintf("cluster%.0f.markers", as.integer(i)))
-  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[as.integer(i)]]) + ggplot2::ggtitle(paste(top_DE_genes[[as.integer(i)]], sprintf("Cluster %.0f", as.integer(i)), sep = " ")))
+  print(Seurat::FeaturePlot(cmc, features = top_DE_genes[[as.integer(i)]]) + ggplot2::ggtitle(paste(top_DE_genes[[as.integer(i)]], "Cluster", i)))
 }
 ```
 
@@ -246,7 +250,9 @@ cmc.markers %>%
   arrange(p_val_adj) %>%
   slice_head(n = 10) %>%
   ungroup() -> top10
-Seurat::DoHeatmap(cmc, features = top10$gene) + Seurat::NoLegend()
+Seurat::DoHeatmap(cmc, features = top10$gene) + Seurat::NoLegend() +
+  ggplot2::ggtitle("Expression Heatmap across Cells of Top Differentially Expressed 
+                   Genes per Cluster")
 ```
 
 # Cluster Annotation
@@ -263,7 +269,8 @@ cmc$cluster_14 = ifelse(Seurat::Idents(cmc) == "14", "Cluster 14", "Other")
 Seurat::VlnPlot(cmc, features = "percent.mito", cols = c("Cluster 14" = "blue", "Other" = "lightgrey"), group.by = "cluster_14")
 
 Seurat::FeatureScatter(cmc, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = "cluster_14") +
-  ggplot2::scale_color_manual(values = c("Cluster 14" = "blue", "Other" = "lightgrey"))
+  ggplot2::scale_color_manual(values = c("Cluster 14" = "blue", "Other" = "lightgrey")) + 
+  ggplot2::ggtitle("Number of Features vs. Number of Counts")
 ```
 
 From the above plots, one can see that cluster 14 has low RNA and feature counts but an elevated mitochondrial content.
@@ -304,7 +311,8 @@ saveRDS(cured_cmc, file.path(output_data_path,paste0(ds_name,sprintf("_gated_%s.
 Let us quickly visualize the obtained scGate classification on our Umap.
 
 ```{r scGate_classification_plot}
-Seurat::DimPlot(cured_cmc, reduction = "umap", group.by = "scGate_multi", label = TRUE, repel = TRUE)
+Seurat::DimPlot(cured_cmc, reduction = "umap", group.by = "scGate_multi", label = TRUE, repel = TRUE) +
+  ggplot2::ggtitle("scGate Cell Annotation")
 ```
 
 Now, we create a stacked barplot to analyze which cell types, obtained from the scGate classification, the clusters map to.
@@ -315,13 +323,15 @@ Seurat::Idents(cured_cmc) <- sprintf("RNA_snn_res.%.1f", res)
 dittoSeq::dittoBarPlot(
     object = cured_cmc,
     var = Seurat::Idents(cured_cmc),
-    group.by = "scGate_multi")
+    group.by = "scGate_multi") +
+  ggplot2::ggtitle("Stacked Bar Plot of Cluster Representation across Cell Types")
 
-plot <- dittoSeq::dittoBarPlot(
+dittoSeq::dittoBarPlot(
     object = cured_cmc,
     var = "scGate_multi",
-    group.by = Seurat::Idents(cured_cmc))
-plot + ggplot2::xlab("Clusters")
+    group.by = Seurat::Idents(cured_cmc)) +
+  ggplot2::ggtitle("Stacked Bar Plot of Cell Type Representation across Clusters") +
+  ggplot2::xlab("Clusters")
 
 frequency.mat <- table(Seurat::Idents(cured_cmc), cured_cmc$scGate_multi)
 frequency.mat <- apply(frequency.mat, 1, function(x) {
@@ -363,3 +373,19 @@ Finally, let us save our final Seurat object that has been scGated and manually 
 ```{r saving_annotated}
 saveRDS(cured_cmc, file.path(output_data_path,paste0(ds_name,sprintf("_annotated_%s.rds", size))))
 ```
+
+## Quality Control of Manual Annotation
+
+```{r annotation_qc}
+qc_markers <- c("MS4A1", "FOXN1", "RAMP3", "COL1A1", "JCHAIN", "TPSAB1", "CTAG2", "CD8A", "C1QC")
+
+Seurat::Idents(cured_cmc) <- "manual_annotation"
+Seurat::VlnPlot(cured_cmc, features = qc_markers, stack = T, flip = T, fill.by = "ident",
+    assay = "RNA") + Seurat::NoLegend()
+```
+
+
+
+
+
+
