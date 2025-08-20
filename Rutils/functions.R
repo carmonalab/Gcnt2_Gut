@@ -385,14 +385,18 @@ signif.plot <- function(data, x, y, plot_type = "Scatter", test = "Wilcox",
   if(plot_type == "Violin"){
     plot <- plot + ggplot2::geom_violin()
   } else if(plot_type == "Scatter") {
-    plot <- plot + ggplot2::geom_jitter(width = 0.05, size = 1, show.legend = FALSE) +
+    plot <- plot + ggplot2::geom_jitter(width = 0.2, size = 1, show.legend = FALSE, height = 0) +
       ggplot2::stat_summary(fun = mean, geom = "crossbar", width = 0.5,
                             fatten = 2, color = "magenta", show.legend = FALSE) +
       ggplot2::labs(caption = "Magenta line indicates mean")
   } else if(plot_type == "Boxplot") {
     plot <- plot + ggplot2::geom_boxplot(alpha=0.2)
+  } else if(plot_type == "Scatter-Boxplot") {
+    plot <- plot + ggplot2::geom_jitter(width = 0.2, size = 1, show.legend = FALSE, height = 0) +
+      ggplot2::geom_boxplot(alpha=0.2)
   } else {
-    stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', or 'Boxplot'")
+    stop("Error: 'plot_type' parameter must one of the follwing characters: 'Violin', 'Scatter', 'Boxplot', 
+         or 'Scatter-Boxplot'")
   }
 
   # Determining wanted test type and then adding significance levels to the plots

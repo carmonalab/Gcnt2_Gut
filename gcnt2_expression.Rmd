@@ -30,9 +30,9 @@ gcnt2_counts <- counts["GCNT2", ]
 cmc$GCNT2 <- gcnt2_counts
 ```
 
-# Initial Analysis per Cell Type
+# Initial Analysis
 
-## Initial Statistical Tests
+## Initial Statistical Tests per Cell Type
 
 ```{r in_stat_tests}
 gcnt2.cell_type.expression <- cmc@meta.data[, c("manual_annotation", "GCNT2")]
@@ -59,7 +59,7 @@ gcnt2.t_test.results <- pairwise.t.test(gcnt2.cell_type.expression$GCNT2,
 print(as.data.frame(gcnt2.t_test.results$p.value))
 ```
 
-## Initial Diagnostic Plots
+## Initial Diagnostic Plots per Cell Type
 
 ```{r in_diganostic_plots}
 # Violin plots of GCNT2 expression across cell types
@@ -83,7 +83,7 @@ Seurat::FeaturePlot(cmc, features = "GCNT2") +
   ggplot2::ggtitle("Feature Plot of GCNT2 Expression across Cell Types")
 ```
 
-Clearly, most cells, independent of their type, do not express GCNT2. Therefore, for downstream analyses, let us focus solely on the cells which do express GCNT2.
+Clearly, most cells, independent of their type, do not express GCNT2. Therefore, let us also create a filtered Seurat object containing only GCNT2-expressing cells. Nonetheless, the filtered Seurat object is likely biased and won't be used often. Still, it will be interesting to compare the two Seurat objects while grouping them by cell type, gut condition, individual, etc.
 
 ```{r subsetting_cells}
 filtered_cmc <- subset(cmc, subset = GCNT2 > 0)
@@ -181,7 +181,7 @@ cmc@meta.data %>%
 
 ggplot2::ggplot(cell_type_sample_fr, ggplot2::aes(x = manual_annotation, y = Sample,
                                                      fill = filtering_ratio)) +
-  ggplot2::geom_tile()+
+  ggplot2::geom_tile() +
   ggplot2::geom_text(ggplot2::aes(label = round(filtering_ratio, 3)), color = "black", size = 3) +
   ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
                                name = "Filtering Ratio") +
@@ -192,11 +192,59 @@ ggplot2::ggplot(cell_type_sample_fr, ggplot2::aes(x = manual_annotation, y = Sam
   ggplot2::theme_classic()
 ```
 
+Having the filtering ratio data frame across individuals and cell types, as constructed above, we can perform statistical tests by grouping the individuals per gut condition. This way, we will be able to infer whether GCNT2 expression changes per cell type, across conditions. 
+
+```{r testing_filtering_ratio}
+cell_type_sample_fr$Condition <- substr(cell_type_sample_fr$Sample, 1, 2)
+
+for(cell_type in unique(cell_type_sample_fr$manual_annotation)){
+  cells_of_interest <- filter(cell_type_sample_fr, manual_annotation == cell_type)
+  print(signif.plot(cells_of_interest, x = "Condition", y = "filtering_ratio", plot_type = "Scatter-Boxplot",
+              test = "Wilcox", plot_title = cell_type))
+}
+```
+
 # Analysis per Cell Type 
+
+## Volcano Plot
+
+The Volcano Plot will enable us to visually situate GCNT2 on the ladder of differential gene expression, grouped by cell type.
+
+```{r}
+cmc.markers.cell_type <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", group.by = "manual_annotation",
+                                      max.cells.per.ident = Inf, random.seed = 42)
+
+cmc.markers.cell_type$de_expression <- "NO"
+cmc.markers.cell_type$de_expression[cmc.markers.cell_type$avg_log2FC > 0.6 
+                                    & cmc.markers.cell_type$p_val_adj < 0.05] <- "UP"
+cmc.markers.cell_type$de_expression[cmc.markers.cell_type$avg_log2FC < -0.6 
+                                    & cmc.markers.cell_type$p_val_adj < 0.05] <- "DOWN"
+
+cmc.markers.cell_type$GCNT2_label <- NA
+cmc.markers.cell_type["GCNT2", "GCNT2_label"] <- "GCNT2"
+```
+
+```{r}
+color_palette <- c("NO" = "black", "UP" = "green", "DOWN" = "red")
+
+ggplot2::ggplot(cmc.markers.cell_type, ggplot2::aes(x = avg_log2FC, y = -log10(p_val_adj), 
+                                                    col = de_expression, label = GCNT2_label)) +
+  ggplot2::geom_point(size = 0.3) +
+  ggplot2::scale_color_manual(values = color_palette) +
+  ggplot2::labs(color = "Differential Expression") +
+  ggrepel::geom_label_repel() +
+  ggplot2::geom_vline(xintercept=c(-0.6, 0.6), col="magenta") +
+  ggplot2::geom_hline(yintercept=-log10(0.05), col="magenta") + 
+  ggplot2::ggtitle("Volcano Plot, Grouped by Cell Type") +
+  ggplot2::theme_classic()
+```
 
 ## Statistical Tests
 
 ```{r stat_tests_per_cell_type}
+# Only GCNT2 expressing cells considered
+# The statistical tests with all cells can be found in the section: Initial Analysis
+
 gcnt2.cell_type.expression <- filtered_cmc@meta.data[, c("manual_annotation", "GCNT2")]
 
 # Anova table across cell types
@@ -258,16 +306,49 @@ In this sub-section, we combine both the diagnostic plots and the test results t
 
 
 ```{r significance_plots_per_cell_type}
-signif.plot(gcnt2.cell_type.expression, x = "manual_annotation", y = "GCNT2", 
+signif.plot(cmc@meta.data, x = "manual_annotation", y = "GCNT2", 
             plot_type = "Violin", test = "Wilcox",
-            plot_title = "GCNT2 Expression vs. Cell Type Omitting GCNT2 Non-expressing Cells, Wilcoxon Test")
+            plot_title = "GCNT2 Expression vs. Cell Type, Wilcoxon Test")
 
-signif.plot(gcnt2.cell_type.expression, x = "manual_annotation", y = "GCNT2", 
+signif.plot(cmc@meta.data, x = "manual_annotation", y = "GCNT2", 
             plot_type = "Boxplot", test = "T-test",
-            plot_title = "GCNT2 Expression vs. Cell Type Omitting GCNT2 Non-expressing Cells, T-Test")
+            plot_title = "GCNT2 Expression vs. Cell Type, T-Test")
 ```
 
 # Analysis per Condition
+
+## Volcano Plot
+
+The Volcano Plot will enable us to visually situate GCNT2 on the ladder of differential gene expression, grouped by gut condition.
+
+```{r}
+cmc.markers.treatment <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", group.by = "Treatment",
+                                      max.cells.per.ident = Inf, random.seed = 42)
+
+cmc.markers.treatment$de_expression <- "NO"
+cmc.markers.treatment$de_expression[cmc.markers.treatment$avg_log2FC > 0.6 
+                                    & cmc.markers.treatment$p_val_adj < 0.05] <- "UP"
+cmc.markers.treatment$de_expression[cmc.markers.treatment$avg_log2FC < -0.6 
+                                    & cmc.markers.treatment$p_val_adj < 0.05] <- "DOWN"
+
+cmc.markers.treatment$GCNT2_label <- NA
+cmc.markers.treatment["GCNT2", "GCNT2_label"] <- "GCNT2"
+```
+
+```{r}
+color_palette <- c("NO" = "black", "UP" = "green", "DOWN" = "red")
+
+ggplot2::ggplot(cmc.markers.treatment, ggplot2::aes(x = avg_log2FC, y = -log10(p_val_adj), 
+                                                    col = de_expression, label = GCNT2_label)) +
+  ggplot2::geom_point(size = 0.3) +
+  ggplot2::scale_color_manual(values = color_palette, na.translate = FALSE) +
+  ggplot2::labs(color = "Differential Expression") +
+  ggrepel::geom_label_repel() +
+  ggplot2::geom_vline(xintercept=c(-0.6, 0.6), col="magenta") +
+  ggplot2::geom_hline(yintercept=-log10(0.05), col="magenta") + 
+  ggplot2::ggtitle("Volcano Plot, Grouped by Gut Condition") +
+  ggplot2::theme_classic()
+```
 
 ## Statistical Tests
 
@@ -356,11 +437,11 @@ In this sub-section, we combine both the diagnostic plots and the test results t
 | ≤ 0.0001 | ****    |
 
 ```{r significance_plots_per_condition}
-signif.plot(gcnt2.condition.expression, x = "Treatment", y = "GCNT2", 
+signif.plot(cmc@meta.data, x = "Treatment", y = "GCNT2", 
             plot_type = "Scatter", test = "Wilcox",
             plot_title = "GCNT2 Expression vs. Gut Condition Omitting GCNT2 Non-expressing Cells, Wilcoxon Test")
 
-signif.plot(gcnt2.condition.expression, x = "Treatment", y = "GCNT2", 
+signif.plot(cmc@meta.data, x = "Treatment", y = "GCNT2", 
             plot_type = "Boxplot", test = "Tukey",
             plot_title = "GCNT2 Expression vs. Gut Condition Omitting GCNT2 Non-expressing Cells, Tukey Test")
 ```
@@ -370,16 +451,16 @@ signif.plot(gcnt2.condition.expression, x = "Treatment", y = "GCNT2",
 In this section, we iterate over each cell type and subdivide into distinct gut conditions. This way, we will analyze GCNT2 expression per cell type per gut condition.
 
 ```{r setting_idents}
-Seurat::Idents(filtered_cmc) <- "manual_annotation"
+Seurat::Idents(cmc) <- "manual_annotation"
 
-cell_types <- unique(Seurat::Idents(filtered_cmc))
-conditions <- unique(filtered_cmc$Treatment)
+cell_types <- unique(Seurat::Idents(cmc))
+conditions <- unique(cmc$Treatment)
 ```
 
 ## Heatmap
 
 ```{r dot_plot}
-gcnt2.cell.condition <- Seurat::FetchData(filtered_cmc, vars = c("GCNT2", "manual_annotation", "Treatment"))
+gcnt2.cell.condition <- Seurat::FetchData(cmc, vars = c("GCNT2", "manual_annotation", "Treatment"))
 
 gcnt2.cell.condition %>% 
   dplyr::group_by(manual_annotation, Treatment) %>% 
@@ -388,8 +469,7 @@ gcnt2.cell.condition %>%
 ggplot2::ggplot(mean.gcnt2.df, ggplot2::aes(x = Treatment, y = manual_annotation, fill = mean_GCNT2)) +
   ggplot2::geom_tile() +
   ggplot2::scale_fill_gradient(low = "yellow", high = "red") +
-  ggplot2::labs(title = "Heatmap of GCNT2 Expression across Cell Types and Gut Conditions, 
-                         Omitting GCNT2 Non-Expressing Cells",
+  ggplot2::labs(title = "Heatmap of GCNT2 Expression across Cell Types and Gut Conditions",
                 fill = "Mean GCNT2 expression") +
   ggplot2::xlab("Gut Condition") +
   ggplot2::ylab("Cell Type") +
@@ -402,7 +482,7 @@ ggplot2::ggplot(mean.gcnt2.df, ggplot2::aes(x = Treatment, y = manual_annotation
 
 ```{r anova_tables}
 for(cell_type in cell_types){
-  cell_type_meta <- subset(filtered_cmc, idents = cell_type)@meta.data
+  cell_type_meta <- subset(cmc, idents = cell_type)@meta.data
   condition_frequency <- table(cell_type_meta$Treatment) 
   
   un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
@@ -410,7 +490,7 @@ for(cell_type in cell_types){
   if(length(un_rep_conditions) < length(unique(cell_type_meta$Treatment))) {
     cell_type_meta <- subset(cell_type_meta, subset = !(Treatment %in% un_rep_conditions))
     gcnt2.aov.model <- aov(cell_type_meta$GCNT2 ~ cell_type_meta$Treatment)
-    cat(sprintf("\033[31m%s Cells\033[39m\n", cell_type))
+    cat(paste0("\033[31m", cell_type, "\033[39m\n"))
     print(summary(gcnt2.aov.model))
     cat("\n")
   }
@@ -423,7 +503,7 @@ for(cell_type in cell_types){
 ```{r ridge_plots}
 for(cell_type in cell_types){
   
-  cell_type_seurat <- subset(filtered_cmc, idents = cell_type)
+  cell_type_seurat <- subset(cmc, idents = cell_type)
   condition_frequency <- table(cell_type_seurat$Treatment) 
   
   un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
@@ -432,16 +512,26 @@ for(cell_type in cell_types){
     cell_type_seurat <- subset(cell_type_seurat, subset = !(Treatment %in% un_rep_conditions)) 
     
     print(Seurat::RidgePlot(cell_type_seurat, features = "GCNT2", group.by = "Treatment") + 
-        ggplot2::ggtitle(sprintf("%s Cells", cell_type)))
+        ggplot2::ggtitle(cell_type))
   }
 }
 ```
 
 ## Significance Plots
 
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
 ```{r significance_plots}
 for(cell_type in cell_types){
-  cell_type_meta <- subset(filtered_cmc, idents = cell_type)@meta.data
+  cell_type_meta <- subset(cmc, idents = cell_type)@meta.data
   condition_frequency <- table(cell_type_meta$Treatment) 
   
   un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
@@ -449,7 +539,7 @@ for(cell_type in cell_types){
   if(length(un_rep_conditions) < length(unique(cell_type_meta$Treatment))) {
     cell_type_meta <- subset(cell_type_meta, subset = !(Treatment %in% un_rep_conditions))
     print(signif.plot(cell_type_meta, x = "Treatment", y = "GCNT2", plot_type = "Boxplot",
-                      test = "T-test", plot_title = sprintf("%s Cells", cell_type)))
+                      test = "T-test", plot_title = cell_type))
   }
 }
 ```
@@ -461,10 +551,10 @@ for(cell_type in cell_types){
 Firstly, we aim to find aggregate GCNT2 expression per individual and cell type. Thus, for each cell type, we will have 18 values corresponding to the 18 distinct patients.
 
 ```{r preparation}
-cmc_pseudo <- Seurat::AggregateExpression(cmc, features = "GCNT2", return.seurat = FALSE,
+cmc_pseudo <- Seurat::AggregateExpression(cmc, features = "GCNT2", slot = "data",
                                           group.by = c("manual_annotation", "Sample"))
 cmc_pseudo <- cmc_pseudo[[1]] %>%
-  as.data.frame() %>% 
+  as.data.frame() %>%
   tidyr::pivot_longer(
     cols = tidyr::everything(),
     names_to = "cell_sample",
@@ -480,11 +570,21 @@ cell_types <- unique(cmc_pseudo$cell.type)
 
 Let us display again significance scatter plots per cell type per gut condition. Nonetheless, this time, all cells, even GCNT2 non-expressing cells, are taken into account. In addition, the scattered points represent pseudobulk results, per cell type and individual, instead of single cells. 
 
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
 ```{r pseudo_significance_plots}
 for(cell_type in cell_types){
   pseudo_cell_type <- subset(cmc_pseudo, subset = (cell.type == cell_type))
-  print(signif.plot(pseudo_cell_type, x = "treatment", y = "GCNT2", plot_type = "Scatter",
-                      test = "Wilcox", plot_title = sprintf("%s Cells", cell_type)))
+  print(signif.plot(pseudo_cell_type, x = "treatment", y = "GCNT2", plot_type = "Scatter-Boxplot",
+                      test = "Wilcox", plot_title = cell_type))
 }
 ```
 
