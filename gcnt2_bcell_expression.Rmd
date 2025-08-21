@@ -1,0 +1,267 @@
+---
+title: "Analysis of GCNT2 Expression in B Cells"
+author: "A. Mihaylov <aleksandar.mihaylov@epfl.ch>"
+---
+
+# Dataset Preparation
+
+## Downloading Finely Annotated Dataset
+
+```{r downloading_processed_dataset}
+# library(dplyr)
+source("Rutils/functions.R")
+
+ds_name <- "SalasA_2023_GSE214695"
+home.path <- file.path(getwd(), ds_name)
+output_data_path <- file.path(home.path, "output")
+
+size <- "whole" # "light" or "whole"
+
+# cmc stands for colonic mucosa cells
+cmc <- readRDS(file.path(output_data_path, paste0(ds_name, 
+                                                  sprintf("_finely_annotated_%s.rds", size))))
+```
+
+## Extracting GCNT2 Counts 
+
+We extract the GCNT2 normalized counts and add them as a meta data column in our Seurat object for easier manipulation in downstream analyses.
+
+```{r extracting_counts}
+counts <- Seurat::GetAssayData(cmc, assay = "RNA", slot = "data")
+gcnt2_counts <- counts["GCNT2", ]
+cmc$GCNT2 <- gcnt2_counts
+```
+
+## Isolating B Cells
+
+Let us first visualize the B cells that we are going to isolate on a dimensional reduction plot containing all cells.
+
+```{r bcells_dimplot}
+cmc$bcell_status <- (cmc$manual_annotation == "Bcell")
+
+Seurat::DimPlot(cmc, group.by = "bcell_status") +
+  ggplot2::ggtitle("B Cell Status") +
+  ggplot2::labs(col = "B Cell")
+```
+
+
+```{r isolating_bcells}
+b_cells <- subset(cmc, subset = (manual_annotation == "Bcell"))
+
+head(b_cells@meta.data)
+
+cat("Number of cells in Seurat object:", length(Seurat::Cells(cmc)), "\n")
+cat("Number of B cells in Seurat object", length(Seurat::Cells(b_cells)),
+    paste0("(", round(length(Seurat::Cells(b_cells))*100/length(Seurat::Cells(cmc)), 3), "%)"))
+
+Seurat::DimPlot(b_cells, group.by = "manual_annotation") + 
+  ggplot2::ggtitle("B Cells")
+```
+
+# Clustering Workflow
+
+## Finding Variable Features
+
+```{r finding_variable_features}
+b_cells <- Seurat::FindVariableFeatures(b_cells, selection.method = "dispersion", nfeatures = 2000)
+
+cat("GCNT2 in B cells' variable features:", "GCNT2" %in% Seurat::VariableFeatures(b_cells))
+
+plot <- Seurat::VariableFeaturePlot(b_cells) 
+plot <- Seurat::LabelPoints(plot = plot, points = "GCNT2", repel = TRUE)
+plot 
+```
+
+## Scaling the data
+
+```{r scaling_data}
+b_cells <- Seurat::ScaleData(b_cells)
+```
+
+## PCA
+
+```{r PCA}
+b_cells <- Seurat::RunPCA(b_cells, features = Seurat::VariableFeatures(b_cells))
+
+Seurat::ElbowPlot(b_cells)
+```
+
+Visually, one can see an elbow at PC 7. Therefore, we keep the first 7 PCs.
+
+## Clustering
+
+```{r clustering}
+b_cells <- Seurat::FindNeighbors(b_cells, dims = 1:7)
+b_cells <- Seurat::FindClusters(b_cells, resolution = 0.07, algorithm = 4, random.seed = 42)
+
+Seurat::Idents(b_cells) <- "RNA_snn_res.0.07"
+```
+
+```{r umap}
+Seurat::Idents(b_cells) <- "RNA_snn_res.0.07"
+b_cells <- Seurat::RunUMAP(b_cells, dims = 1:15, seed.use = 42)
+Seurat::DimPlot(b_cells, reduction = "umap", label = TRUE) +
+  ggplot2::ggtitle("Umap of KNN Clustering with 0.07 Resolution")
+```
+
+To check whether our clustering is satisfactory, we look at GCNT2 expression among B cells, as well as the distribution of gut conditions. These two variables define structures which we would like to have been embraced by our clustering results.
+
+```{r}
+Seurat::FeaturePlot(b_cells, features = "GCNT2") + 
+  ggplot2::ggtitle("GCNT2 Expression among B Cells")
+
+Seurat::DimPlot(b_cells, group.by = "Treatment") +
+  ggplot2::ggtitle("Distribution of Gut Conditions among B Cells")
+```
+
+# Differentially Expressed Genes
+
+## Volcano Plot
+
+```{r volcano_plot_prep}
+b_cells.markers <- Seurat::FindAllMarkers(b_cells, test.use = "wilcox",
+                                          max.cells.per.ident = Inf, random.seed = 42)
+
+b_cells.markers$de_expression <- "NO"
+b_cells.markers$de_expression[b_cells.markers$avg_log2FC > 0.6 
+                                    & b_cells.markers$p_val_adj < 0.05] <- "UP"
+b_cells.markers$de_expression[b_cells.markers$avg_log2FC < -0.6 
+                                    & b_cells.markers$p_val_adj < 0.05] <- "DOWN"
+
+b_cells.markers$GCNT2_label <- NA
+b_cells.markers["GCNT2", "GCNT2_label"] <- "GCNT2"
+```
+
+
+```{r volcano_plot_display}
+color_palette <- c("NO" = "black", "UP" = "green", "DOWN" = "red")
+
+ggplot2::ggplot(b_cells.markers, ggplot2::aes(x = avg_log2FC, y = -log10(p_val_adj), 
+                                                    col = de_expression, label = GCNT2_label)) +
+  ggplot2::geom_point(size = 0.3) +
+  ggplot2::scale_color_manual(values = color_palette) +
+  ggplot2::labs(color = "Differential Expression") +
+  ggrepel::geom_label_repel() +
+  ggplot2::geom_vline(xintercept=c(-0.6, 0.6), col="magenta") +
+  ggplot2::geom_hline(yintercept=-log10(0.05), col="magenta") + 
+  ggplot2::ggtitle("Volcano Plot, Grouped by Cluster") +
+  ggplot2::theme_classic()
+```
+
+GCNT2 is 'DOWN' differentially expressed. We can retrieve its p-value and avg_log2FC.
+
+```{r gcnt2_stats}
+cat("Differential Expression of GCNT2:", b_cells.markers["GCNT2", "de_expression"], "\n")
+cat("GCNT2 p-value:",  b_cells.markers["GCNT2", "p_val_adj"], "\n")
+cat("GCNT2 avg_log2FC:",  b_cells.markers["GCNT2", "avg_log2FC"], "\n")
+```
+
+
+## Running Seurat::FindMarkers
+
+```{r find_DE}
+de_genes <- Seurat::FindMarkers(b_cells, ident.1 = 1, ident.2 = 2, random.seed = 42)
+
+de_genes
+de_genes["GCNT2", ]
+```
+
+## GCNT2 Binary Expression
+
+```{r binary_gcnt2}
+b_cells$binary_gcnt2 <- ifelse(b_cells$GCNT2 > 0, TRUE, FALSE)
+```
+
+```{r cluster_treatment_binary_expression}
+b_cells@meta.data %>% 
+  dplyr::group_by(RNA_snn_res.0.07, Treatment) %>% 
+  summarise(
+    total_cells = n(),
+    gcnt2_expressing_cells = sum(binary_gcnt2),
+    expression_ratio = gcnt2_expressing_cells*100/total_cells
+  ) -> cluster_treatment_binary_expression
+
+ggplot2::ggplot(cluster_treatment_binary_expression, ggplot2::aes(x = Treatment, y = RNA_snn_res.0.07,
+                                                                     fill = expression_ratio)) +
+  ggplot2::geom_tile() +
+  ggplot2::geom_text(ggplot2::aes(label = round(expression_ratio, 3)), color = "black", size = 4) +
+  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
+                               name = "Expression Ratio") +
+  ggplot2::ggtitle("Heatmap of GCNT2 Expression Ratio across Clusters
+                    and Gut Conditions") +
+  ggplot2::xlab("Gut Condition") +
+  ggplot2::ylab("Cluster") +
+  ggplot2::theme_classic()
+
+signif.plot(cluster_treatment_binary_expression, x = "RNA_snn_res.0.07", y = "expression_ratio", 
+            plot_type = "Scatter-Boxplot", test = "Wilcox", 
+            plot_title = "GCNT2 Expression Ratio across Clusters, Grouped by Condition")
+```
+
+```{r cluster_sample_binary_expression}
+b_cells@meta.data %>% 
+  dplyr::group_by(RNA_snn_res.0.07, Sample) %>% 
+  summarise(
+    total_cells = n(),
+    gcnt2_expressing_cells = sum(binary_gcnt2),
+    expression_ratio = gcnt2_expressing_cells*100/total_cells
+  ) -> cluster_sample_binary_expression
+
+ggplot2::ggplot(cluster_sample_binary_expression, ggplot2::aes(x = RNA_snn_res.0.07, y = Sample,
+                                                                     fill = expression_ratio)) +
+  ggplot2::geom_tile() +
+  ggplot2::geom_text(ggplot2::aes(label = round(expression_ratio, 3)), color = "black", size = 4) +
+  ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
+                               name = "Expression Ratio") +
+  ggplot2::ggtitle("Heatmap of GCNT2 Expression Ratio across Clusters
+                    and Individuals") +
+  ggplot2::xlab("Cluster") +
+  ggplot2::ylab("Individual") +
+  ggplot2::theme_classic()
+
+signif.plot(cluster_sample_binary_expression, x = "RNA_snn_res.0.07", y = "expression_ratio", 
+            plot_type = "Scatter-Boxplot", test = "Wilcox", 
+            plot_title = "GCNT2 Expression Ratio across Clusters, Grouped by Individual")
+```
+
+## GCNT2 Continuous Expression
+
+```{r gcnt2_continuous_expression}
+signif.plot(b_cells@meta.data, x = "RNA_snn_res.0.07", y = "GCNT2", plot_type = "Scatter-Boxplot",
+            test = "Wilcox", plot_title = "GCNT2 Expression across Clusters")
+```
+
+## GCNT2 Pseudobulk Expression 
+
+```{r gcnt2_pseudobulk_prep}
+bcells_pseudo <- Seurat::AggregateExpression(b_cells, features = "GCNT2", slot = "data",
+                                          group.by = c("RNA_snn_res.0.07", "Sample"))
+bcells_pseudo <- bcells_pseudo[[1]] %>%
+  as.data.frame() %>%
+  tidyr::pivot_longer(
+    cols = tidyr::everything(),
+    names_to = "cluster_sample",
+    values_to = "GCNT2") %>%
+  separate(cluster_sample, into = c("cluster", "sample"), sep = "_")
+
+bcells_pseudo$treatment <- substr(bcells_pseudo$sample, 1, 2)
+bcells_pseudo$cluster[bcells_pseudo$cluster == "g1"] <- "1"
+bcells_pseudo$cluster[bcells_pseudo$cluster == "g2"] <- "2"
+bcells_pseudo$cluster <- as.factor(bcells_pseudo$cluster)
+```
+
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
+```{r gcnt2_pseudo_significance_plots}
+print(signif.plot(bcells_pseudo, x = "cluster", y = "GCNT2", plot_type = "Scatter-Boxplot",
+                    test = "Tukey", plot_title = "Pseudobulk GCNT2 Expression across Clusters"))
+```
+
