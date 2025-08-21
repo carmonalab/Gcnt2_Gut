@@ -328,6 +328,8 @@ ggplot2::ggplot(cmc.markers.treatment, ggplot2::aes(x = avg_log2FC, y = -log10(p
   ggplot2::theme_classic()
 ```
 
+In the above Volcano Plot, GCNT2 does not show up because its p-value is NA.
+
 ## Statistical Tests
 
 ```{r stat_tests_per_condition}
