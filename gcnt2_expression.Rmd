@@ -124,7 +124,7 @@ ggplot2::ggplot(cell_type_treatment_binary_expression, ggplot2::aes(x = Treatmen
   ggplot2::geom_tile() +
   ggplot2::geom_text(ggplot2::aes(label = round(expression_ratio, 3)), color = "black", size = 4) +
   ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
-                               name = "Filtering Ratio") +
+                               name = "Expression Ratio") +
   ggplot2::ggtitle("Heatmap of GCNT2 Expression Ratio across 
                    Cell Types and Gut Conditions") +
   ggplot2::xlab("Gut Condition") +
@@ -148,7 +148,7 @@ ggplot2::ggplot(cell_type_sample_binary_expression, ggplot2::aes(x = manual_anno
   ggplot2::geom_tile() +
   ggplot2::geom_text(ggplot2::aes(label = round(expression_ratio, 3)), color = "black", size = 3) +
   ggplot2::scale_fill_gradient(low = "yellow", high = "darkolivegreen3",
-                               name = "Filtering Ratio") +
+                               name = "Expression Ratio") +
   ggplot2::ggtitle("Heatmap of GCNT2 Expression Ratio across 
                    Cell Types and Individuals") +
   ggplot2::xlab("Cell Type") +
@@ -156,7 +156,7 @@ ggplot2::ggplot(cell_type_sample_binary_expression, ggplot2::aes(x = manual_anno
   ggplot2::theme_classic()
 ```
 
-Having the filtering ratio data frame across individuals and cell types, as constructed above, we can perform statistical tests by grouping the individuals per gut condition. This way, we will be able to infer whether GCNT2 expression changes per cell type, across conditions. 
+Having the expression ratio data frame across individuals and cell types, as constructed above, we can perform statistical tests by grouping the individuals per gut condition. This way, we will be able to infer whether GCNT2 expression changes per cell type, across conditions. 
 
 ```{r testing_expression_ratio}
 cell_type_sample_binary_expression$Condition <- substr(cell_type_sample_binary_expression$Sample, 1, 2)
@@ -396,7 +396,7 @@ signif.plot(cmc@meta.data, x = "Treatment", y = "GCNT2",
 
 signif.plot(cmc@meta.data, x = "Treatment", y = "GCNT2", 
             plot_type = "Boxplot", test = "Tukey",
-            plot_title = "GCNT2 Expression vs. Gut Condition, Tukey HSD Testd")
+            plot_title = "GCNT2 Expression vs. Gut Condition, Tukey HSD Test")
 ```
 
 # Analysis per Cell Type per Gut Condition
@@ -518,7 +518,7 @@ cell_types <- unique(cmc_pseudo$cell.type)
 
 ## Significance Plots per Cell Type per Gut Condition
 
-Let us display again significance scatter plots per cell type per gut condition. Nonetheless, this time, all cells, even GCNT2 non-expressing cells, are taken into account. In addition, the scattered points represent pseudobulk results, per cell type and individual, instead of single cells. 
+Let us display again significance scatter plots per cell type per gut condition. The scattered points represent pseudobulk results, per cell type and individual, instead of single cells. 
 
 *Significance levels*
 
