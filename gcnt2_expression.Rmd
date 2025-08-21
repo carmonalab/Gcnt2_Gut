@@ -24,7 +24,7 @@ cmc <- readRDS(file.path(output_data_path, paste0(ds_name,
 
 ## Extracting GCNT2 Counts 
 
-We extract the GCNT2 normalized counts and add them as a meta data column in our Seurat object for easier amnipulation in downstream analyses.
+We extract the GCNT2 normalized counts and add them as a meta data column in our Seurat object for easier manipulation in downstream analyses.
 
 ```{r extracting_counts}
 counts <- Seurat::GetAssayData(cmc, assay = "RNA", slot = "data")
@@ -195,7 +195,7 @@ The Volcano Plot will enable us to visually situate GCNT2 on the ladder of diffe
 
 ```{r de_cell_type}
 cmc.markers.cell_type <- Seurat::FindAllMarkers(cmc, test.use = "wilcox", group.by = "manual_annotation",
-                                      max.cells.per.ident = Inf, random.seed = 42)
+                                                max.cells.per.ident = Inf, random.seed = 42)
 
 cmc.markers.cell_type$de_expression <- "NO"
 cmc.markers.cell_type$de_expression[cmc.markers.cell_type$avg_log2FC > 0.6 
