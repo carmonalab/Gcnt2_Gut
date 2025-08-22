@@ -24,7 +24,7 @@ cmc <- readRDS(file.path(output_data_path, paste0(ds_name,
 
 ## Extracting GCNT2 Counts 
 
-We extract the GCNT2 normalized counts and add them as a meta data column in our Seurat object for easier manipulation in downstream analyses.
+We extract the GCNT2 normalized counts and add them as a metadata column in our Seurat object for easier manipulation in downstream analyses.
 
 ```{r extracting_counts}
 counts <- Seurat::GetAssayData(cmc, assay = "RNA", slot = "data")
@@ -36,13 +36,17 @@ cmc$GCNT2 <- gcnt2_counts
 
 ## Feature Plot
 
+We begin by analyzing whether GCNT2 expression is restricted to certain regions within the Umap plot.
+
 ```{r in_feature_plot}
 # Feature plot of GCNT2 on Umap reduction
 Seurat::FeaturePlot(cmc, features = "GCNT2") + 
   ggplot2::ggtitle("Feature Plot of GCNT2 Expression across Cell Types")
 ```
 
-Seemingly, GCNT2 is expressed by very few cells in our Seurat object. Let us quantify the number and percentage of cells, within our Seurat object, that express GCNT2.
+Seemingly, GCNT2 is expressed by very few cells in our Seurat object. Still, GCNT2 expression seems quite abundant in a sub-cluster of B cells. Further investigations on that matter can be found in the file *gcnt2_bcell_expression.Rmd*. 
+
+For now, let us quantify the number and percentage of cells, within our Seurat object, that express GCNT2.
 
 ## Number of Cells Expressing GCNT2
 
@@ -62,7 +66,7 @@ Clearly, most cells, do not express GCNT2. Nevertheless, is this behavior indepe
 
 # Binary GCNT2 Expression Analysis
 
-To answer the above question, consider that each cell either expresses GCNT2, at some level, or doesn't. This enables us to classify cells in a binary fashion: TRUE if GCNT2 is expressed and FALSE if it isn't. Subsequently, we can perform statistical tests to check for significance between cell types, gut conditions, and individuals.
+To answer the above question, consider that each cell either expresses GCNT2, at some non-zero level, or doesn't. This enables us to classify cells in a binary fashion: TRUE if GCNT2 is expressed and FALSE if it isn't. Subsequently, we can perform statistical tests to check for significance between cell types, gut conditions, and individuals.
 
 ## Per Cell Type 
 
@@ -222,6 +226,14 @@ ggplot2::ggplot(cmc.markers.cell_type, ggplot2::aes(x = avg_log2FC, y = -log10(p
   ggplot2::theme_classic()
 ```
 
+GCNT2 is 'DOWN' differentially expressed. We can retrieve its p-value and avg_log2FC.
+
+```{r gcnt2_stats_cell_type}
+cat("Differential Expression of GCNT2:", cmc.markers.cell_type["GCNT2", "de_expression"], "\n")
+cat("GCNT2 p-value:",  cmc.markers.cell_type["GCNT2", "p_val_adj"], "\n")
+cat("GCNT2 avg_log2FC:",  cmc.markers.cell_type["GCNT2", "avg_log2FC"], "\n")
+```
+
 ## Statistical Tests
 
 ```{r stat_tests_per_cell_type}
@@ -269,7 +281,7 @@ Seurat::RidgePlot(cmc, features = "GCNT2", group.by = "manual_annotation") +
 
 ## Significance Plots
 
-In this sub-section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per cell type, and observe the statistical difference in GCNT2 expression between cell types. 
+In this sub-section, we combine both the diagnostic plots and the test results that were obtained into significance plots. In these plots, one can visualize GCNT2 expression per cell type, and observe the statistical difference in GCNT2 expression between cell types. 
 
 *Significance levels*
 
@@ -330,6 +342,12 @@ ggplot2::ggplot(cmc.markers.treatment, ggplot2::aes(x = avg_log2FC, y = -log10(p
 
 In the above Volcano Plot, GCNT2 does not show up because its p-value is NA.
 
+```{r gcnt2_stats_treatment}
+cat("Differential Expression of GCNT2:", cmc.markers.treatment["GCNT2", "de_expression"], "\n")
+cat("GCNT2 p-value:",  cmc.markers.treatment["GCNT2", "p_val_adj"], "\n")
+cat("GCNT2 avg_log2FC:",  cmc.markers.treatment["GCNT2", "avg_log2FC"], "\n")
+```
+
 ## Statistical Tests
 
 ```{r stat_tests_per_condition}
@@ -377,7 +395,7 @@ Seurat::RidgePlot(cmc, features = "GCNT2", group.by = "Treatment") +
 
 ## Significance Plots
 
-In this sub-section, we combine both the diagnostic plots and the test results that we obtained into significance plots. In these plots, one can visualize GCNT2 expression per gut condition, and observe the statistical difference in GCNT2 expression between gut conditions. 
+In this sub-section, we combine both the diagnostic plots and the test results that were obtained into significance plots. In these plots, one can visualize GCNT2 expression per gut condition, and observe the statistical difference in GCNT2 expression between gut conditions. 
 
 *Significance levels*
 
@@ -401,7 +419,7 @@ signif.plot(cmc@meta.data, x = "Treatment", y = "GCNT2",
 
 # Analysis per Cell Type per Gut Condition
 
-In this section, we iterate over each cell type and subdivide into distinct gut conditions. This way, we will analyze GCNT2 expression per cell type per gut condition.
+In this section, we iterate over each cell type and subdivide it into the 3 distinct gut conditions. This way, we will analyze GCNT2 expression per cell type per gut condition.
 
 ```{r setting_idents}
 Seurat::Idents(cmc) <- "manual_annotation"
@@ -427,6 +445,7 @@ ggplot2::ggplot(mean.gcnt2.df, ggplot2::aes(x = Treatment, y = manual_annotation
   ggplot2::theme_classic()
 ```
 
+Again, we see that B cells seem to upregulate GCNT2 expression under certain conditions. For further analysis, check out the *gcnt2_bcell_expression.Rmd* file.
 
 ## Anova Tables
 
@@ -446,7 +465,6 @@ for(cell_type in cell_types){
   }
 }
 ```
-
 
 ## Ridge Plots
 
@@ -469,6 +487,8 @@ for(cell_type in cell_types){
 
 ## Significance Plots
 
+In this sub-section, we combine both the diagnostic plots and the test results that were obtained into significance plots. There is a significance plot per cell type, where one can visualize differences in GCNT2 expression across the different gut conditions,and observe their statistical significance.
+
 *Significance levels*
 
 | P-value  | Legend  |
@@ -489,16 +509,16 @@ for(cell_type in cell_types){
   if(length(un_rep_conditions) < length(unique(cell_type_meta$Treatment))) {
     cell_type_meta <- subset(cell_type_meta, subset = !(Treatment %in% un_rep_conditions))
     print(signif.plot(cell_type_meta, x = "Treatment", y = "GCNT2", plot_type = "Boxplot",
-                      test = "Tukey", plot_title = cell_type))
+                      test = "Wilcox", plot_title = cell_type))
   }
 }
 ```
 
 # Pseudobulk 
 
-## Dataset Preparation
+## Pseudobulk Preparation
 
-Firstly, we aim to find aggregate GCNT2 expression per individual and cell type. Thus, for each cell type, we will have 18 values corresponding to the 18 distinct patients.
+Firstly, we aim to aggregate GCNT2 expression per individual and cell type. Thus, for each cell type, we will have 18 values corresponding to the 18 distinct patients.
 
 ```{r preparation}
 cmc_pseudo <- Seurat::AggregateExpression(cmc, features = "GCNT2", slot = "data",
@@ -518,7 +538,7 @@ cell_types <- unique(cmc_pseudo$cell.type)
 
 ## Significance Plots per Cell Type per Gut Condition
 
-Let us display again significance scatter plots per cell type per gut condition. The scattered points represent pseudobulk results, per cell type and individual, instead of single cells. 
+Let us display again significance scatter plots per cell type and gut condition. The scattered points represent pseudobulk results, per individual, instead of single cells. 
 
 *Significance levels*
 

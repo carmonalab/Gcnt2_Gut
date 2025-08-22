@@ -1,5 +1,5 @@
 ---
-title: "Analysis of GCNT2 Expression in B Cells"
+title: "Analysis of GCNT2 Expression Profile in B Cells"
 author: "A. Mihaylov <aleksandar.mihaylov@epfl.ch>"
 ---
 
@@ -8,7 +8,6 @@ author: "A. Mihaylov <aleksandar.mihaylov@epfl.ch>"
 ## Downloading Finely Annotated Dataset
 
 ```{r downloading_processed_dataset}
-# library(dplyr)
 source("Rutils/functions.R")
 
 ds_name <- "SalasA_2023_GSE214695"
@@ -24,7 +23,7 @@ cmc <- readRDS(file.path(output_data_path, paste0(ds_name,
 
 ## Extracting GCNT2 Counts 
 
-We extract the GCNT2 normalized counts and add them as a meta data column in our Seurat object for easier manipulation in downstream analyses.
+We extract the GCNT2 normalized counts and add them as a metadata column in our Seurat object for easier manipulation in downstream analyses.
 
 ```{r extracting_counts}
 counts <- Seurat::GetAssayData(cmc, assay = "RNA", slot = "data")
@@ -44,6 +43,7 @@ Seurat::DimPlot(cmc, group.by = "bcell_status") +
   ggplot2::labs(col = "B Cell")
 ```
 
+Then, we subset the B cells to create a new Seurat object.
 
 ```{r isolating_bcells}
 b_cells <- subset(cmc, subset = (manual_annotation == "Bcell"))
@@ -59,6 +59,8 @@ Seurat::DimPlot(b_cells, group.by = "manual_annotation") +
 ```
 
 # Clustering Workflow
+
+Now that we have isolated the B cells, we repeat the Seurat clustering workflow to try and separate them into 2 clusters. Hopefully, GCNT2 as well as other genes will be differentially expressed between these 2 obtained clusters.
 
 ## Finding Variable Features
 
@@ -99,7 +101,7 @@ Seurat::Idents(b_cells) <- "RNA_snn_res.0.07"
 
 ```{r umap}
 Seurat::Idents(b_cells) <- "RNA_snn_res.0.07"
-b_cells <- Seurat::RunUMAP(b_cells, dims = 1:15, seed.use = 42)
+b_cells <- Seurat::RunUMAP(b_cells, dims = 1:7, seed.use = 42)
 Seurat::DimPlot(b_cells, reduction = "umap", label = TRUE) +
   ggplot2::ggtitle("Umap of KNN Clustering with 0.07 Resolution")
 ```
@@ -117,6 +119,8 @@ Seurat::DimPlot(b_cells, group.by = "Treatment") +
 # Differentially Expressed Genes
 
 ## Volcano Plot
+
+To display a Volcano Plot, illustrating differential gene expression between the 2 clusters, we first find the markers of each cluster. To do so, we use the function *Seurat::FindAllMarkers()*.
 
 ```{r volcano_plot_prep}
 b_cells.markers <- Seurat::FindAllMarkers(b_cells, test.use = "wilcox",
@@ -166,11 +170,17 @@ de_genes
 de_genes["GCNT2", ]
 ```
 
+Note that since we have only 2 clusters, *Seurat::FindMarkers()* and *Seurat::FindAllMarkers()* output the same data frame.
+
 ## GCNT2 Binary Expression
+
+To quantify GCNT2 expression between the 2 clusters, we begin by looking at their GCNT2 expression ratio. That is, within each cluster, what percentage of cells express GCNT2 at some non-zero level?
 
 ```{r binary_gcnt2}
 b_cells$binary_gcnt2 <- ifelse(b_cells$GCNT2 > 0, TRUE, FALSE)
 ```
+
+Firstly, we group the cells within each cluster by gut condition. Then, we calculate the expression ratio per gut condition. This yields 3 points (UC, CD, and HC) per cluster which will be used to display significance plots.
 
 ```{r cluster_treatment_binary_expression}
 b_cells@meta.data %>% 
@@ -194,9 +204,11 @@ ggplot2::ggplot(cluster_treatment_binary_expression, ggplot2::aes(x = Treatment,
   ggplot2::theme_classic()
 
 signif.plot(cluster_treatment_binary_expression, x = "RNA_snn_res.0.07", y = "expression_ratio", 
-            plot_type = "Scatter-Boxplot", test = "Wilcox", 
+            plot_type = "Scatter-Boxplot", test = "Tukey", 
             plot_title = "GCNT2 Expression Ratio across Clusters, Grouped by Condition")
 ```
+
+Secondly, we group the cells within each cluster per individual. Then, we calculate the expression ratio individual. This in turn yields more points per cluster, compared to the gut condition grouping, which will be used to display significance plots.
 
 ```{r cluster_sample_binary_expression}
 b_cells@meta.data %>% 
@@ -226,12 +238,16 @@ signif.plot(cluster_sample_binary_expression, x = "RNA_snn_res.0.07", y = "expre
 
 ## GCNT2 Continuous Expression
 
+Next, we use the normalized GCNT2 counts per cell to study the difference in GCNT2 expression profile between the 2 clusters.
+
 ```{r gcnt2_continuous_expression}
 signif.plot(b_cells@meta.data, x = "RNA_snn_res.0.07", y = "GCNT2", plot_type = "Scatter-Boxplot",
             test = "Wilcox", plot_title = "GCNT2 Expression across Clusters")
 ```
 
 ## GCNT2 Pseudobulk Expression 
+
+Finally, we also perform a pseudobulk analysis of GCNT2 expression between both clusters. GCNT2 expression is bulked per cluster and per individual.
 
 ```{r gcnt2_pseudobulk_prep}
 bcells_pseudo <- Seurat::AggregateExpression(b_cells, features = "GCNT2", slot = "data",
