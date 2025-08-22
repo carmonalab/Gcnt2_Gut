@@ -204,7 +204,7 @@ ggplot2::ggplot(cluster_treatment_binary_expression, ggplot2::aes(x = Treatment,
   ggplot2::theme_classic()
 
 signif.plot(cluster_treatment_binary_expression, x = "RNA_snn_res.0.07", y = "expression_ratio", 
-            plot_type = "Scatter-Boxplot", test = "Tukey", 
+            plot_type = "Scatter-Boxplot", test = "Wilcox", alternative = "less",
             plot_title = "GCNT2 Expression Ratio across Clusters, Grouped by Condition")
 ```
 
@@ -232,7 +232,7 @@ ggplot2::ggplot(cluster_sample_binary_expression, ggplot2::aes(x = RNA_snn_res.0
   ggplot2::theme_classic()
 
 signif.plot(cluster_sample_binary_expression, x = "RNA_snn_res.0.07", y = "expression_ratio", 
-            plot_type = "Scatter-Boxplot", test = "Wilcox", 
+            plot_type = "Scatter-Boxplot", test = "Wilcox", alternative = "less",
             plot_title = "GCNT2 Expression Ratio across Clusters, Grouped by Individual")
 ```
 
@@ -242,7 +242,7 @@ Next, we use the normalized GCNT2 counts per cell to study the difference in GCN
 
 ```{r gcnt2_continuous_expression}
 signif.plot(b_cells@meta.data, x = "RNA_snn_res.0.07", y = "GCNT2", plot_type = "Scatter-Boxplot",
-            test = "Wilcox", plot_title = "GCNT2 Expression across Clusters")
+            test = "Wilcox", alternative = "less", plot_title = "GCNT2 Expression across Clusters")
 ```
 
 ## GCNT2 Pseudobulk Expression 
@@ -278,6 +278,7 @@ bcells_pseudo$cluster <- as.factor(bcells_pseudo$cluster)
 
 ```{r gcnt2_pseudo_significance_plots}
 print(signif.plot(bcells_pseudo, x = "cluster", y = "GCNT2", plot_type = "Scatter-Boxplot",
-                    test = "Tukey", plot_title = "Pseudobulk GCNT2 Expression across Clusters"))
+                  test = "Wilcox", alternative = "less",
+                  plot_title = "Pseudobulk GCNT2 Expression across Clusters"))
 ```
 
