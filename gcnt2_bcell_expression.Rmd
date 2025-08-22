@@ -390,3 +390,39 @@ print(signif.plot(bcells_pseudo, x = "treatment", y = "GCNT2", plot_type = "Scat
                   plot_title = "Pseudobulk GCNT2 Expression across Gut Conditions"))
 ```
 
+# GCNT2 Correlation with Other Genes
+
+## Granzyme A and B 
+
+Let us first investigate the correlation of GCNT2 with the Granzyme genes: Granzyme A, B, H, and K.
+
+```{r granzyme_correlation}
+granzymes = c("GZMA", "GZMB", "GZMH", "GZMK")
+
+Seurat::DotPlot(b_cells, features = c("GCNT2", granzymes)) + Seurat::RotatedAxis()
+
+for(granzyme in granzymes) {
+  print(Seurat::FeatureScatter(b_cells, feature1 = "GCNT2", feature2 = granzyme))
+}
+```
+
+## Other Genes
+
+```{r correlation_matrix}
+expression_matrix <- as.matrix(Seurat::GetAssayData(b_cells, assay = "RNA", slot = "data"))
+gcnt2_expression <- expression_matrix["GCNT2",]
+
+gcnt2_correlation <- apply(expression_matrix, 1, function(x) {
+  suppressWarnings(cor(x, gcnt2_expression, method = "pearson"))
+})
+
+gcnt2_correlation <- gcnt2_correlation[names(gcnt2_correlation) != "GCNT2"]
+
+head(sort(gcnt2_correlation))
+tail(sort(gcnt2_correlation))
+
+```
+
+
+
+
