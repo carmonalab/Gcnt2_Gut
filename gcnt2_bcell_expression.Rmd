@@ -8,6 +8,7 @@ author: "A. Mihaylov <aleksandar.mihaylov@epfl.ch>"
 ## Downloading Finely Annotated Dataset
 
 ```{r downloading_processed_dataset}
+library(dplyr)
 source("Rutils/functions.R")
 
 ds_name <- "SalasA_2023_GSE214695"
@@ -108,12 +109,33 @@ Seurat::DimPlot(b_cells, reduction = "umap", label = TRUE) +
 
 To check whether our clustering is satisfactory, we look at GCNT2 expression among B cells, as well as the distribution of gut conditions. These two variables define structures which we would like to have been embraced by our clustering results.
 
-```{r}
+```{r clustering_check}
 Seurat::FeaturePlot(b_cells, features = "GCNT2") + 
   ggplot2::ggtitle("GCNT2 Expression among B Cells")
 
 Seurat::DimPlot(b_cells, group.by = "Treatment") +
   ggplot2::ggtitle("Distribution of Gut Conditions among B Cells")
+
+cluster_treatment_composition <- b_cells@meta.data %>% 
+  dplyr::group_by(RNA_snn_res.0.07, Treatment) %>% 
+  summarise(cells = n()) %>% 
+  dplyr::group_by(RNA_snn_res.0.07) %>% 
+  mutate(total_cells = sum(cells),
+            percentage = cells*100/total_cells)
+
+ggplot2::ggplot(cluster_treatment_composition, ggplot2::aes(x = Treatment, y = RNA_snn_res.0.07, 
+                                                            fill = percentage)) +
+  ggplot2::geom_tile() +
+  ggplot2::geom_text(ggplot2::aes(label = round(percentage, 2)), color = "black", size = 4) +
+  ggplot2::scale_fill_gradient(low = "skyblue", high = "darkorchid1",
+                               name = "Percentage") +
+  ggplot2::ggtitle("Heatmap of Cluster Composition across Gut Conditions") +
+  ggplot2::xlab("Gut Condition") +
+  ggplot2::ylab("Cluster") +
+  ggplot2::theme_classic()
+
+cat("Number of cells in cluster 1:", length(Seurat::WhichCells(b_cells, idents = "1")), "\n")
+cat("Number of cells in cluster 2:", length(Seurat::WhichCells(b_cells, idents = "2")))
 ```
 
 # Differentially Expressed Genes
@@ -172,6 +194,8 @@ de_genes["GCNT2", ]
 
 Note that since we have only 2 clusters, *Seurat::FindMarkers()* and *Seurat::FindAllMarkers()* output the same data frame.
 
+# GCNT2 Expression across Clusters
+
 ## GCNT2 Binary Expression
 
 To quantify GCNT2 expression between the 2 clusters, we begin by looking at their GCNT2 expression ratio. That is, within each cluster, what percentage of cells express GCNT2 at some non-zero level?
@@ -210,6 +234,16 @@ signif.plot(cluster_treatment_binary_expression, x = "RNA_snn_res.0.07", y = "ex
 
 Secondly, we group the cells within each cluster per individual. Then, we calculate the expression ratio individual. This in turn yields more points per cluster, compared to the gut condition grouping, which will be used to display significance plots.
 
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
 ```{r cluster_sample_binary_expression}
 b_cells@meta.data %>% 
   dplyr::group_by(RNA_snn_res.0.07, Sample) %>% 
@@ -240,12 +274,22 @@ signif.plot(cluster_sample_binary_expression, x = "RNA_snn_res.0.07", y = "expre
 
 Next, we use the normalized GCNT2 counts per cell to study the difference in GCNT2 expression profile between the 2 clusters.
 
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
 ```{r gcnt2_continuous_expression}
 signif.plot(b_cells@meta.data, x = "RNA_snn_res.0.07", y = "GCNT2", plot_type = "Scatter-Boxplot",
             test = "Wilcox", alternative = "less", plot_title = "GCNT2 Expression across Clusters")
 ```
 
-## GCNT2 Pseudobulk Expression 
+## GCNT2 Pseudobulk Expression
 
 Finally, we also perform a pseudobulk analysis of GCNT2 expression between both clusters. GCNT2 expression is bulked per cluster and per individual.
 
@@ -280,5 +324,69 @@ bcells_pseudo$cluster <- as.factor(bcells_pseudo$cluster)
 print(signif.plot(bcells_pseudo, x = "cluster", y = "GCNT2", plot_type = "Scatter-Boxplot",
                   test = "Wilcox", alternative = "less",
                   plot_title = "Pseudobulk GCNT2 Expression across Clusters"))
+```
+
+# GCNT2 Expression across Gut Conditions
+
+## GCNT2 Continuous Expression
+
+We use the normalized GCNT2 counts per cell to study the difference in GCNT2 expression profile between the 3 gut conditions. Specifically, we try to identify the conditions which *increase* GCNT2 expression in B cells. Note that our *signif.plot* function is not well-adapted to interpret statistical significance once the test's alternative is not two-sided. Therefore, we look at both the lesser and greater test alternative and make sure to display the Wilcoxon test's results unequivocally in a data frame.
+
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
+```{r gcnt2_continuous_expression_}
+# We set alternative to 'less' for the Wilcoxon test
+signif.plot(b_cells@meta.data, x = "Treatment", y = "GCNT2", plot_type = "Scatter-Boxplot",
+            test = "Wilcox", alternative = "less", 
+            plot_title = "GCNT2 Expression across Gut Conditions, Lesser Alternative")
+
+multiple.wilcox.tests(b_cells@meta.data, "Treatment", "GCNT2", alternative = "less")
+
+# We set alternative to 'greater' for the Wilcoxon test
+signif.plot(b_cells@meta.data, x = "Treatment", y = "GCNT2", plot_type = "Scatter-Boxplot",
+            test = "Wilcox", alternative = "greater", 
+            plot_title = "GCNT2 Expression across Gut Conditions, Greater Alternative")
+
+multiple.wilcox.tests(b_cells@meta.data, "Treatment", "GCNT2", alternative = "greater")
+```
+
+## GCNT2 Pseudobulk Expression
+
+We also perform a pseudobulk analysis of GCNT2 expression between the three gut conditions. GCNT2 expression is bulked per gut condition and per individual.
+
+```{r gcnt2_pseudobulk_prep_}
+bcells_pseudo <- Seurat::AggregateExpression(b_cells, features = "GCNT2", slot = "data",
+                                          group.by = c("Treatment", "Sample"))
+bcells_pseudo <- bcells_pseudo[[1]] %>%
+  as.data.frame() %>%
+  tidyr::pivot_longer(
+    cols = tidyr::everything(),
+    names_to = "treatment_sample",
+    values_to = "GCNT2") %>%
+  separate(treatment_sample, into = c("treatment", "sample"), sep = "_")
+```
+
+*Significance levels*
+
+| P-value  | Legend  |
+|----------|---------|
+| > 0.05   | Nothing |
+| ≤ 0.05   | *       |
+| ≤ 0.01   | **      |
+| ≤ 0.001  | ***     |
+| ≤ 0.0001 | ****    |
+
+```{r gcnt2_pseudo_significance_plots_}
+print(signif.plot(bcells_pseudo, x = "treatment", y = "GCNT2", plot_type = "Scatter-Boxplot",
+                  test = "Wilcox", alternative = "two.sided",
+                  plot_title = "Pseudobulk GCNT2 Expression across Gut Conditions"))
 ```
 
