@@ -107,6 +107,12 @@ Seurat::DimPlot(b_cells, reduction = "umap", label = TRUE) +
   ggplot2::ggtitle("Umap of KNN Clustering with 0.07 Resolution")
 ```
 
+Let us save our B cell, Seurat object that has been clustered.
+
+```{r saving_bcells}
+saveRDS(b_cells, file.path(output_data_path,paste0(ds_name,sprintf("_bcells_%s.rds", size))))
+```
+
 To check whether our clustering is satisfactory, we look at GCNT2 expression among B cells, as well as the distribution of gut conditions. These two variables define structures which we would like to have been embraced by our clustering results.
 
 ```{r clustering_check}
