@@ -20,7 +20,7 @@ Crohn's disease (CD), or ulcerative colitis (UC) influence _GCNT2_ expression pe
 
 -   [Clustering](#clustering)
 
--   [GCNT2 Expression](#gcnt2_expression)
+-   [_GCNT2_ Expression](#gcnt2_expression)
 
 -   [Author](#author)
 
@@ -79,14 +79,18 @@ annotation. The clustering resolution was low and resulted in 9 distinct cell ty
 Given that the all cells were clustered and annotated at once, the **batch_effects_verification.Rmd** file was
 created to check that no batch effects had been ignored throughout the process.
 
-## _GCNT2_ Expression <a name="gcnt2_expression"></a>
+CD4 T cells and CD8 T cells were also subdivided into subtypes in the **t_cell_projection.Rmd** file, using
+ProjecTILs. However, given that  cancerous reference maps were used, which do not apply in HC, CD, and UC
+gastrointestinal conditions, the results of this step shall be ignored.
+
+## _GCNT2_ Expression 🧪 <a name="gcnt2_expression"></a>
 
 _GCNT2_ expression was quantified per cell type, per gut condition, and per cell type per gut condition.
 The quantification was done in three distinct ways. Firstly, the ratios of _GCNT2_ expressing cells were investigated.
 Secondly, _GCNT2_ expression was studied using the normalized counts. Thirdly, a pseudobulk analysis of _GCNT2_
 expression was conducted. All results can be found in the **gcnt2_expression.Rmd** file.
 
-### Deeper Dive Into B Cells
+### Deeper Dive Into B Cells 🧫
 
 Differential expression of _GCNT2_ was observed within the sub-population of B cells. Hence, the 
 **gcnt2_bcell_expression.Rmd** is dedicated to studying _GCNT2_ expression in this sub-population. In this file, 
