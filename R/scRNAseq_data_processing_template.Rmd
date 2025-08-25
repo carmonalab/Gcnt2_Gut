@@ -24,7 +24,7 @@ Set root directory for processing
 ```{r set_dir}
 # Set path to the directory were
 # Set path to the directory were to get input and output
-home.path <- file.path(getwd(), ds_name)
+home.path <- file.path(getwd(), "..", ds_name)
 
 knitr::opts_chunk$set(echo = T, warning = F,include=T, message=F)
 ```
@@ -49,7 +49,7 @@ for(package in pckgs){
 }
 
 # load custom functions
-source("Rutils/functions.R")
+source("../Rutils/functions.R")
 
 options(timeout=4000) # increase time out for downloading
 ```

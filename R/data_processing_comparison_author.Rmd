@@ -7,14 +7,14 @@ author: A. Mihaylov <aleksandar.mihaylov@epfl.ch>
 ```{r downloading_author_annotations}
 ds_name <- "SalasA_2023_GSE214695"
 
-author_annotations <- data.table::fread(file.path(ds_name, "data/GSE214695/GSE214695_cell_annotation.csv.gz"), header = TRUE)
+author_annotations <- data.table::fread(file.path("..", ds_name, "data/GSE214695/GSE214695_cell_annotation.csv.gz"), header = TRUE)
 
 author_cells <- paste(author_annotations$sample, author_annotations$cell_id, sep = "_")
 cat(author_cells[1:8])
 ```
 
 ```{r downloading_processed_dataset}
-processed_seurat_object <- readRDS(file.path(ds_name, "output/SalasA_2023_GSE214695_whole.rds"))
+processed_seurat_object <- readRDS(file.path("..", ds_name, "output/SalasA_2023_GSE214695_whole.rds"))
 sample.split <- strsplit(as.vector(processed_seurat_object@meta.data$Sample), "\\-")
 sample <- paste0(sapply(sample.split, function(x) x[[1]]), sapply(sample.split, function(x) x[[2]]))
 processed_cells <- paste(sample, processed_seurat_object@meta.data$Original_cell_names , sep = "_")
