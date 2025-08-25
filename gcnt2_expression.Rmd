@@ -558,12 +558,76 @@ for(cell_type in cell_types){
 }
 ```
 
+# GCNT2 Correlation with Other Genes
 
+## Granzymes 
 
+Let us first investigate the correlation of GCNT2 with the Granzyme genes: Granzyme A, B, H, and K.
 
+```{r granzyme_correlation}
+granzymes = c("GZMA", "GZMB", "GZMH", "GZMK")
 
+Seurat::DotPlot(cmc, features = c("GCNT2", granzymes)) + Seurat::RotatedAxis()
 
+for(granzyme in granzymes) {
+  print(Seurat::FeatureScatter(cmc, feature1 = "GCNT2", feature2 = granzyme))
+}
+```
 
+## Other Genes
+
+```{r correlation_with_other_genes}
+Seurat::Idents(cmc) <- "manual_annotation"
+cell_types <- unique(Seurat::Idents(cmc))
+
+for(cell_type in cell_types){
+  cells_of_interest <- subset(cmc, idents = cell_type)
+  
+  expression_matrix <- as.matrix(Seurat::GetAssayData(cells_of_interest, assay = "RNA", slot = "data"))
+  gcnt2_expression <- expression_matrix["GCNT2",]
+  
+  gcnt2_correlation <- apply(expression_matrix, 1, function(x) {
+    suppressWarnings(cor(x, gcnt2_expression, method = "pearson"))
+  })
+  
+  gcnt2_correlation <- gcnt2_correlation[names(gcnt2_correlation) != "GCNT2"]
+  
+  cat(paste0("\033[31m", cell_type, "\033[39m\n"))
+  cat(cat("\033[32mPositively Correlated Genes\033[39m\n"))
+  print(head(sort(gcnt2_correlation, decreasing = TRUE), 10))
+  cat(cat("\033[32mNegatively Correlated Genes\033[39m\n"))
+  print(head(sort(gcnt2_correlation, decreasing = FALSE), 10))
+  cat("\n")
+}
+```
+
+## Deeper Dive: Mast Cells
+
+```{r mast_cells_correaltion_plots}
+positively_correlated_genes <- c('LAMA2', 'DYNLRB2', 'GP1BA', 'ABCG8', 'CTIF', 'GABRD')
+
+mast_cells <- subset(cmc, idents = "Mast")
+
+Seurat::DotPlot(mast_cells, features = c("GCNT2", positively_correlated_genes)) + Seurat::RotatedAxis()
+
+for(gene in positively_correlated_genes) {
+  print(Seurat::FeatureScatter(mast_cells, feature1 = "GCNT2", feature2 = gene, jitter = FALSE))
+}
+```
+
+## Deeper Dive: Endothelial Cells
+
+```{r endothelial_cells_correaltion_plots}
+positively_correlated_genes <- c('ZDHHC11B', 'PRDM16-DT', 'MYO7B', 'CGNL1', 'L1CAM', 'HR', 'LINC01504', 'FGF18',                                    'PHF19', 'WDR86') 
+
+endothelial_cells <- subset(cmc, idents = "Endothelial")
+
+Seurat::DotPlot(endothelial_cells, features = c("GCNT2", positively_correlated_genes)) + Seurat::RotatedAxis()
+
+for(gene in positively_correlated_genes) {
+  print(Seurat::FeatureScatter(endothelial_cells, feature1 = "GCNT2", feature2 = gene, jitter = FALSE))
+}
+```
 
 
 

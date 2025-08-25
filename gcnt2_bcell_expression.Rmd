@@ -393,7 +393,7 @@ print(signif.plot(bcells_pseudo, x = "treatment", y = "GCNT2", plot_type = "Scat
 
 # GCNT2 Correlation with Other Genes
 
-## Granzyme A and B 
+## Granzymes 
 
 Let us first investigate the correlation of GCNT2 with the Granzyme genes: Granzyme A, B, H, and K.
 
@@ -409,7 +409,7 @@ for(granzyme in granzymes) {
 
 ## Other Genes
 
-```{r correlation_matrix}
+```{r correlation_with_other_genes}
 expression_matrix <- as.matrix(Seurat::GetAssayData(b_cells, assay = "RNA", slot = "data"))
 gcnt2_expression <- expression_matrix["GCNT2",]
 
@@ -419,9 +419,9 @@ gcnt2_correlation <- apply(expression_matrix, 1, function(x) {
 
 gcnt2_correlation <- gcnt2_correlation[names(gcnt2_correlation) != "GCNT2"]
 
-cat(cat("\033[31mPositively Correlated Genes\033[39m\n"))
+cat(cat("\033[32mPositively Correlated Genes\033[39m\n"))
 head(sort(gcnt2_correlation, decreasing = TRUE), 10)
-cat(cat("\033[31mNegatively Correlated Genes\033[39m\n"))
+cat(cat("\033[32mNegatively Correlated Genes\033[39m\n"))
 head(sort(gcnt2_correlation, decreasing = FALSE), 10)
 ```
 
