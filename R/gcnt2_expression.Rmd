@@ -603,7 +603,7 @@ for(cell_type in cell_types){
 
 ## Deeper Dive: Mast Cells
 
-```{r mast_cells_correaltion_plots}
+```{r mast_cells_correlation_plots}
 positively_correlated_genes <- c('LAMA2', 'DYNLRB2', 'GP1BA', 'ABCG8', 'CTIF', 'GABRD')
 
 mast_cells <- subset(cmc, idents = "Mast")
@@ -617,7 +617,7 @@ for(gene in positively_correlated_genes) {
 
 ## Deeper Dive: Endothelial Cells
 
-```{r endothelial_cells_correaltion_plots}
+```{r endothelial_cells_correlation_plots}
 positively_correlated_genes <- c('ZDHHC11B', 'PRDM16-DT', 'MYO7B', 'CGNL1', 'L1CAM', 'HR', 'LINC01504', 'FGF18',                                    'PHF19', 'WDR86') 
 
 endothelial_cells <- subset(cmc, idents = "Endothelial")
@@ -636,37 +636,61 @@ filtered_cmc <- subset(cmc, subset = GCNT2 > 0)
 nrow(filtered_cmc@meta.data)
 ```
 
-### Gene Correlations
-
 ```{r filtered_correlation_with_other_genes}
 Seurat::Idents(filtered_cmc) <- "manual_annotation"
 cell_types <- unique(Seurat::Idents(filtered_cmc))
+gcnt2_correlation <- list()
 
 for(cell_type in cell_types){
   cells_of_interest <- subset(filtered_cmc, idents = cell_type)
+  cell_correlation <- data.frame()
   
-  expression_matrix <- as.matrix(Seurat::GetAssayData(cells_of_interest, assay = "RNA", slot = "data"))
-  gcnt2_expression <- expression_matrix["GCNT2",]
-  
-  gcnt2_correlation <- apply(expression_matrix, 1, function(x) {
-    suppressWarnings(cor(x, gcnt2_expression, method = "pearson"))
-  })
-  
-  gcnt2_correlation <- gcnt2_correlation[names(gcnt2_correlation) != "GCNT2"]
-  
-  cat(paste0("\033[31m", cell_type, "\033[39m\n"))
-  cat("Number of cells:", nrow(cells_of_interest@meta.data), "\n")
-  cat(cat("\033[32mPositively Correlated Genes\033[39m\n"))
-  print(head(sort(gcnt2_correlation, decreasing = TRUE), 10))
-  cat(cat("\033[32mNegatively Correlated Genes\033[39m\n"))
-  print(head(sort(gcnt2_correlation, decreasing = FALSE), 10))
-  cat("\n")
+  if(nrow(cells_of_interest@meta.data) > 1) {
+    
+    expression_matrix <- as.matrix(Seurat::GetAssayData(cells_of_interest, assay = "RNA", slot = "data"))
+    gcnt2_expression <- expression_matrix["GCNT2",]
+    
+    cor_results <- t(apply(expression_matrix, 1, function(x) {
+      gene_corr <- suppressWarnings(cor.test(x, gcnt2_expression, method = "pearson"))
+      c(estimate = gene_corr$estimate[["cor"]],
+        p_value  = gene_corr$p.value)
+    }))
+    
+    cor_results <- as.data.frame(cor_results)
+    cor_results$gene <- rownames(expression_matrix)
+    cor_results$cell_type <- cell_type 
+    
+    cell_correlation <- cell_correlation %>% 
+      rbind(cor_results) %>% 
+      dplyr::filter(gene != "GCNT2") %>% 
+      dplyr::filter(p_value <= 0.05 & (estimate <= -0.6 | estimate >= 0.6)) %>% 
+      dplyr::arrange(desc(estimate))
+    
+    gcnt2_correlation[[cell_type]] <- cell_correlation
+    
+    print(cell_correlation)
+  }
 }
 ```
 
+### Deeper Dive: Intersection
 
+```{r epithelial_cells_correaltion_plots}
+dplyr::intersect(gcnt2_correlation[["PlasmaCell"]]$gene, gcnt2_correlation[["Endothelial"]]$gene)
+```
 
+```{r cells_correaltion_plots}
+correlated_genes <- c("BIRC6", "SMCR8", "MUC20-OT1", "SMC6", "MARK3", "H2BC8", "UBE2D3", "ITGA6",    
+"MT-ND5", "NSD1", "MACF1", "RAPGEF1", "HNRNPU", "LUC7L3", "TRMT112", "RPN2") 
 
+plasma_endothelial <- subset(filtered_cmc, idents = c("PlasmaCell", "Endothelial"))
+
+Seurat::DotPlot(filtered_cmc, features = c("GCNT2", correlated_genes)) + Seurat::RotatedAxis()
+
+for(gene in correlated_genes) {
+  print(Seurat::FeatureScatter(plasma_endothelial, feature1 = "GCNT2", feature2 = gene, jitter = TRUE))
+}
+```
 
 
 
