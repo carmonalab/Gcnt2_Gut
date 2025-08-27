@@ -378,7 +378,7 @@ saveRDS(cured_cmc, file.path(output_data_path,paste0(ds_name,sprintf("_annotated
 
 ## Quality Control of Manual Annotation
 
-```{r annotation_qc, fig.height = 16}
+```{r annotation_qc, fig.height = 11, fig.width = 16}
 qc_markers <- c("MS4A1", "CD79A", "FOXN1", "KRT15", "RAMP3", "CLDN5", "COL1A1", "COL1A2",
                 "JCHAIN", "MZB1", "TPSAB1", "TPSB2", "GZMK", "CD4", "CD8A", "CD8B", "C1QC", "TYROBP")
 
