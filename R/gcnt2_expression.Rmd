@@ -629,5 +629,47 @@ for(gene in positively_correlated_genes) {
 }
 ```
 
+## Filtering Out GCNT2 Non-expressing Cells
+
+```{r filtering_seurat_object}
+filtered_cmc <- subset(cmc, subset = GCNT2 > 0)
+nrow(filtered_cmc@meta.data)
+```
+
+### Gene Correlations
+
+```{r filtered_correlation_with_other_genes}
+Seurat::Idents(filtered_cmc) <- "manual_annotation"
+cell_types <- unique(Seurat::Idents(filtered_cmc))
+
+for(cell_type in cell_types){
+  cells_of_interest <- subset(filtered_cmc, idents = cell_type)
+  
+  expression_matrix <- as.matrix(Seurat::GetAssayData(cells_of_interest, assay = "RNA", slot = "data"))
+  gcnt2_expression <- expression_matrix["GCNT2",]
+  
+  gcnt2_correlation <- apply(expression_matrix, 1, function(x) {
+    suppressWarnings(cor(x, gcnt2_expression, method = "pearson"))
+  })
+  
+  gcnt2_correlation <- gcnt2_correlation[names(gcnt2_correlation) != "GCNT2"]
+  
+  cat(paste0("\033[31m", cell_type, "\033[39m\n"))
+  cat("Number of cells:", nrow(cells_of_interest@meta.data), "\n")
+  cat(cat("\033[32mPositively Correlated Genes\033[39m\n"))
+  print(head(sort(gcnt2_correlation, decreasing = TRUE), 10))
+  cat(cat("\033[32mNegatively Correlated Genes\033[39m\n"))
+  print(head(sort(gcnt2_correlation, decreasing = FALSE), 10))
+  cat("\n")
+}
+```
+
+
+
+
+
+
+
+
 
 
