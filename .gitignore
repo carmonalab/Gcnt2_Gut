@@ -39,6 +39,20 @@ batch_effects_verification.html
 batch_effects_verification.pdf
 gcnt2_bcell_expression.html
 gcnt2_bcell_expression.pdf
+R/scRNAseq_data_processing_template.html
+R/scRNAseq_data_processing_template.pdf
+R/data_processing_comparison_author.html
+R/data_processing_comparison_author.pdf
+R/cell_clustering.html
+R/cell_clustering.pdf
+R/t_cell_projections.html
+R/t_cell_projections.pdf
+R/gcnt2_expression.html
+R/gcnt2_expression.pdf
+R/batch_effects_verification.html
+R/batch_effects_verification.pdf
+R/gcnt2_bcell_expression.html
+R/gcnt2_bcell_expression.pdf
 
 # Space-consuming datasets and files  
 datasets/

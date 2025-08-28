@@ -466,6 +466,25 @@ for(cell_type in cell_types){
 }
 ```
 
+## Wilcoxon Tests
+
+```{r wilcoxon_tests}
+for(cell_type in cell_types){
+  cell_type_meta <- subset(cmc, idents = cell_type)@meta.data
+  condition_frequency <- table(cell_type_meta$Treatment) 
+  
+  un_rep_conditions <- names(condition_frequency)[condition_frequency <= 1]
+  
+  if(length(un_rep_conditions) < length(unique(cell_type_meta$Treatment))) {
+    cell_type_meta <- subset(cell_type_meta, subset = !(Treatment %in% un_rep_conditions))
+    gcnt2.wilcox.results <- multiple.wilcox.tests(cell_type_meta, "Treatment", "GCNT2")
+    cat(paste0("\033[31m", cell_type, "\033[39m\n"))
+    print(gcnt2.wilcox.results)
+    cat("\n")
+  }
+}
+```
+
 ## Ridge Plots
 
 ```{r ridge_plots}
