@@ -146,7 +146,7 @@ cat("Number of cells in cluster 2:", length(Seurat::WhichCells(b_cells, idents =
 
 # Differentially Expressed Genes
 
-## Volcano Plot
+## Volcano Plot: Deprecated
 
 To display a Volcano Plot, illustrating differential gene expression between the 2 clusters, we first find the markers of each cluster. To do so, we use the function *Seurat::FindAllMarkers()*.
 
@@ -188,7 +188,6 @@ cat("GCNT2 p-value:",  b_cells.markers["GCNT2", "p_val_adj"], "\n")
 cat("GCNT2 avg_log2FC:",  b_cells.markers["GCNT2", "avg_log2FC"], "\n")
 ```
 
-
 ## Running Seurat::FindMarkers
 
 ```{r find_DE}
@@ -200,6 +199,42 @@ de_genes["GCNT2", ]
 ```
 
 Note that since we have only 2 clusters, *Seurat::FindMarkers()* and *Seurat::FindAllMarkers()* output the same data frame.
+
+## Volcano Plot: Corrected
+
+```{r volcano_plot_display_2}
+de_genes$de_expression <- "NO"
+de_genes$de_expression[de_genes$avg_log2FC > 0.6 
+                                    & de_genes$p_val_adj < 0.05] <- "UP"
+de_genes$de_expression[de_genes$avg_log2FC < -0.6 
+                                    & de_genes$p_val_adj < 0.05] <- "DOWN"
+
+de_genes$label <- NA
+de_genes["GCNT2", "label"] <- "GCNT2"
+
+top_DE_genes <- (de_genes$avg_log2FC > 1.75 & de_genes$p_val_adj < 1e-75) | 
+                (de_genes$avg_log2FC > 5 & de_genes$p_val_adj < 0.05) |
+                (de_genes$avg_log2FC < -5 & de_genes$p_val_adj < 1e-100) |
+                (de_genes$avg_log2FC < -6.5 & de_genes$p_val_adj < 0.05) 
+  
+  
+
+de_genes$label[top_DE_genes] <- rownames(de_genes)[top_DE_genes]
+
+color_palette <- c("NO" = "black", "UP" = "green", "DOWN" = "red")
+
+ggplot2::ggplot(de_genes, ggplot2::aes(x = avg_log2FC, y = -log10(p_val_adj), 
+                                                    col = de_expression, label = label)) +
+  ggplot2::geom_point(size = 0.3) +
+  ggplot2::scale_color_manual(values = color_palette) +
+  ggplot2::labs(color = "Differential Expression") +
+  ggrepel::geom_label_repel() +
+  ggplot2::geom_vline(xintercept=c(-0.6, 0.6), col="magenta") +
+  ggplot2::geom_hline(yintercept=-log10(0.05), col="magenta") + 
+  ggplot2::ggtitle("Volcano Plot, Cluster 1 vs. Cluster 2") +
+  ggplot2::theme_classic()
+```
+
 
 # GCNT2 Expression across Clusters
 
@@ -277,6 +312,15 @@ signif.plot(cluster_sample_binary_expression, x = "RNA_snn_res.0.07", y = "expre
             plot_title = "GCNT2 Expression Ratio across Clusters, Grouped by Individual")
 ```
 
+### Wilcoxon Tests
+
+```{r wilcoxon_tests}
+multiple.wilcox.tests(cluster_treatment_binary_expression, "RNA_snn_res.0.07", "expression_ratio",
+                      alternative = "less")
+multiple.wilcox.tests(cluster_sample_binary_expression, "RNA_snn_res.0.07", "expression_ratio", 
+                      alternative = "less")
+```
+
 ## GCNT2 Continuous Expression
 
 Next, we use the normalized GCNT2 counts per cell to study the difference in GCNT2 expression profile between the 2 clusters.
@@ -294,6 +338,13 @@ Next, we use the normalized GCNT2 counts per cell to study the difference in GCN
 ```{r gcnt2_continuous_expression}
 signif.plot(b_cells@meta.data, x = "RNA_snn_res.0.07", y = "GCNT2", plot_type = "Scatter-Boxplot",
             test = "Wilcox", alternative = "less", plot_title = "GCNT2 Expression across Clusters")
+```
+
+### Wilcoxon Tests
+
+```{r wilcoxon_tests}
+multiple.wilcox.tests(b_cells@meta.data, "RNA_snn_res.0.07", "GCNT2",
+                      alternative = "less")
 ```
 
 ## GCNT2 Pseudobulk Expression

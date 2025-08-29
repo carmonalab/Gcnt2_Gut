@@ -555,6 +555,16 @@ cmc_pseudo$treatment <- substr(cmc_pseudo$sample, 1, 2)
 cell_types <- unique(cmc_pseudo$cell.type)
 ```
 
+## Wilcoxon Tests
+
+```{r wilcoxon_tests_}
+for(cell_type in cell_types){
+  cat(cell_type, "\n")
+  pseudo_cell_type <- subset(cmc_pseudo, subset = (cell.type == cell_type))
+  print(multiple.wilcox.tests(pseudo_cell_type, "treatment", "GCNT2"))
+}
+```
+
 ## Significance Plots per Cell Type per Gut Condition
 
 Let us display again significance scatter plots per cell type and gut condition. The scattered points represent pseudobulk results, per individual, instead of single cells. 
